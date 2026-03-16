@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import type { Quest, QuestType, QuestDifficulty } from '../lib/types'
 import { getQuests, saveQuests, getCharacter, saveCharacter } from '../lib/storage'
 import { applyQuestReward, calcQuestRewards } from '../lib/gameLogic'
