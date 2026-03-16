@@ -1,5 +1,5 @@
 import { getLog, getAchievements } from '../lib/storage'
-import type { LogEntry, Achievement } from '../lib/types'
+import type { LogEntry } from '../lib/types'
 import { useState } from 'react'
 
 export default function LogScreen() {
