@@ -28,3 +28,18 @@ export interface Character {
     discipline: number
   }
 }
+
+export interface Achievement {
+  id: string
+  title: string
+  description: string
+  icon: string
+  unlockedAt?: number
+}
+
+export interface LogEntry {
+  id: string
+  message: string
+  type: 'quest' | 'levelup' | 'achievement' | 'stat'
+  createdAt: number
+}

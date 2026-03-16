@@ -1,10 +1,16 @@
-import type { Character, Quest } from './types'
+import type { Character, Quest, Achievement } from './types'
+import { getAchievements, saveAchievements, addLogEntry } from './storage'
 
 export function calcXpToNextLevel(level: number): number {
   return Math.floor(100 * Math.pow(1.4, level - 1))
 }
 
-export function applyQuestReward(character: Character, quest: Quest): { character: Character; leveledUp: boolean; newLevel: number } {
+export function applyQuestReward(character: Character, quest: Quest): {
+  character: Character
+  leveledUp: boolean
+  newLevel: number
+  newAchievements: Achievement[]
+} {
   const newXp = character.xp + quest.xpReward
   let newLevel = character.level
   let remainingXp = newXp
@@ -19,24 +25,31 @@ export function applyQuestReward(character: Character, quest: Quest): { characte
   }
 
   const statBoosts = calcStatBoosts(quest)
-
-  return {
-    leveledUp,
-    newLevel,
-    character: {
-      ...character,
-      xp: remainingXp,
-      level: newLevel,
-      xpToNextLevel: xpToNext,
-      gold: character.gold + quest.goldReward,
-      stats: {
-        strength: Math.min(10, character.stats.strength + statBoosts.strength),
-        intellect: Math.min(10, character.stats.intellect + statBoosts.intellect),
-        endurance: Math.min(10, character.stats.endurance + statBoosts.endurance),
-        discipline: Math.min(10, character.stats.discipline + statBoosts.discipline),
-      }
-    },
+  const newChar: Character = {
+    ...character,
+    xp: remainingXp,
+    level: newLevel,
+    xpToNextLevel: xpToNext,
+    gold: character.gold + quest.goldReward,
+    stats: {
+      strength: Math.min(10, character.stats.strength + statBoosts.strength),
+      intellect: Math.min(10, character.stats.intellect + statBoosts.intellect),
+      endurance: Math.min(10, character.stats.endurance + statBoosts.endurance),
+      discipline: Math.min(10, character.stats.discipline + statBoosts.discipline),
+    }
   }
+
+  // Лог квеста
+  addLogEntry({ message: `Квест выполнен: «${quest.title}» +${quest.xpReward} XP, +${quest.goldReward} золота`, type: 'quest' })
+
+  if (leveledUp) {
+    addLogEntry({ message: `Достигнут уровень ${newLevel}!`, type: 'levelup' })
+  }
+
+  // Проверяем достижения
+  const newAchievements = checkAchievements(character, newChar, leveledUp, newLevel)
+
+  return { character: newChar, leveledUp, newLevel, newAchievements }
 }
 
 function calcStatBoosts(quest: Quest): Character['stats'] {
@@ -45,24 +58,69 @@ function calcStatBoosts(quest: Quest): Character['stats'] {
   const bump = d === 'Easy' ? 0.1 : d === 'Medium' ? 0.2 : d === 'Hard' ? 0.3 : 0.5
 
   switch (quest.type) {
-    case 'Daily':
-      boosts.discipline += bump
-      break
-    case 'Side':
-      boosts.intellect += bump
-      break
-    case 'Main':
-      boosts.strength += bump
-      boosts.discipline += bump
-      break
+    case 'Daily': boosts.discipline += bump; break
+    case 'Side': boosts.intellect += bump; break
+    case 'Main': boosts.strength += bump; boosts.discipline += bump; break
     case 'Boss':
-      boosts.strength += bump
-      boosts.intellect += bump
-      boosts.endurance += bump
-      boosts.discipline += bump
+      boosts.strength += bump; boosts.intellect += bump
+      boosts.endurance += bump; boosts.discipline += bump
       break
   }
   return boosts
+}
+
+const ALL_ACHIEVEMENTS: Achievement[] = [
+  { id: 'lvl5',   title: 'Путник',       description: 'Достигни 5 уровня',       icon: '🌟' },
+  { id: 'lvl10',  title: 'Воин',         description: 'Достигни 10 уровня',      icon: '⚔️' },
+  { id: 'lvl25',  title: 'Ветеран',      description: 'Достигни 25 уровня',      icon: '🏆' },
+  { id: 'lvl50',  title: 'Легенда',      description: 'Достигни 50 уровня',      icon: '👑' },
+  { id: 'str5',   title: 'Силач',        description: 'Прокачай Силу до 5',      icon: '💪' },
+  { id: 'int5',   title: 'Мудрец',       description: 'Прокачай Интеллект до 5', icon: '📚' },
+  { id: 'end5',   title: 'Марафонец',    description: 'Прокачай Выносливость до 5', icon: '🏃' },
+  { id: 'dis5',   title: 'Монах',        description: 'Прокачай Дисциплину до 5', icon: '🧘' },
+  { id: 'str10',  title: 'Берсерк',      description: 'Прокачай Силу до максимума', icon: '🔥' },
+  { id: 'int10',  title: 'Архимаг',      description: 'Прокачай Интеллект до максимума', icon: '✨' },
+  { id: 'end10',  title: 'Железный',     description: 'Прокачай Выносливость до максимума', icon: '🛡️' },
+  { id: 'dis10',  title: 'Мастер',       description: 'Прокачай Дисциплину до максимума', icon: '🎯' },
+]
+
+function checkAchievements(oldChar: Character, newChar: Character, leveledUp: boolean, newLevel: number): Achievement[] {
+  const existing = getAchievements()
+  const unlockedIds = new Set(existing.filter(a => a.unlockedAt).map(a => a.id))
+  const newlyUnlocked: Achievement[] = []
+
+  const check = (id: string, condition: boolean) => {
+    if (condition && !unlockedIds.has(id)) {
+      const achievement = ALL_ACHIEVEMENTS.find(a => a.id === id)
+      if (achievement) {
+        newlyUnlocked.push({ ...achievement, unlockedAt: Date.now() })
+        addLogEntry({ message: `Достижение разблокировано: ${achievement.icon} «${achievement.title}»`, type: 'achievement' })
+      }
+    }
+  }
+
+  check('lvl5',  leveledUp && newLevel >= 5)
+  check('lvl10', leveledUp && newLevel >= 10)
+  check('lvl25', leveledUp && newLevel >= 25)
+  check('lvl50', leveledUp && newLevel >= 50)
+  check('str5',  newChar.stats.strength >= 5  && oldChar.stats.strength < 5)
+  check('int5',  newChar.stats.intellect >= 5  && oldChar.stats.intellect < 5)
+  check('end5',  newChar.stats.endurance >= 5  && oldChar.stats.endurance < 5)
+  check('dis5',  newChar.stats.discipline >= 5 && oldChar.stats.discipline < 5)
+  check('str10', newChar.stats.strength >= 10  && oldChar.stats.strength < 10)
+  check('int10', newChar.stats.intellect >= 10  && oldChar.stats.intellect < 10)
+  check('end10', newChar.stats.endurance >= 10  && oldChar.stats.endurance < 10)
+  check('dis10', newChar.stats.discipline >= 10 && oldChar.stats.discipline < 10)
+
+  if (newlyUnlocked.length > 0) {
+    const merged = [...existing.filter(a => !newlyUnlocked.find(n => n.id === a.id)), ...newlyUnlocked]
+    const allWithLocked = ALL_ACHIEVEMENTS.map(a => merged.find(m => m.id === a.id) ?? a)
+    saveAchievements(allWithLocked)
+  } else if (existing.length === 0) {
+    saveAchievements(ALL_ACHIEVEMENTS)
+  }
+
+  return newlyUnlocked
 }
 
 export function calcQuestRewards(difficulty: Quest['difficulty']): { xp: number; gold: number } {
