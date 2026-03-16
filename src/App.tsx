@@ -8,7 +8,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('character')
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col max-w-md mx-auto">
+    <div className="h-full bg-gray-950 text-gray-100 flex flex-col max-w-md mx-auto">
       <div className="flex-1 overflow-y-auto" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}>
         {screen === 'character' && <CharacterScreen />}
         {screen === 'quests' && <QuestsScreen />}
