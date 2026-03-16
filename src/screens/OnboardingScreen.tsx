@@ -7,7 +7,6 @@ interface Props {
 
 export default function OnboardingScreen({ onComplete }: Props) {
   const [name, setName] = useState('')
-  const [visible] = useState(true)
 
   const handleStart = () => {
     if (!name.trim()) return
