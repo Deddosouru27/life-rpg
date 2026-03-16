@@ -3,7 +3,11 @@ import type { Quest, QuestType, QuestDifficulty } from '../lib/types'
 import { getQuests, saveQuests, getCharacter, saveCharacter } from '../lib/storage'
 import { applyQuestReward, calcQuestRewards } from '../lib/gameLogic'
 
-export default function QuestsScreen() {
+interface Props {
+  onLevelUp?: (level: number) => void
+}
+
+export default function QuestsScreen({ onLevelUp }: Props) {
   const [quests, setQuests] = useState<Quest[]>(getQuests())
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({
@@ -39,11 +43,14 @@ export default function QuestsScreen() {
   }
 
   const completeQuest = (quest: Quest) => {
-    const char = getCharacter()
-    const updated = applyQuestReward(char, quest)
-    saveCharacter(updated)
-    updateQuests(quests.map(q => q.id === quest.id ? { ...q, status: 'completed', completedAt: Date.now() } : q))
+  const char = getCharacter()
+  const result = applyQuestReward(char, quest)
+  saveCharacter(result.character)
+  updateQuests(quests.map(q => q.id === quest.id ? { ...q, status: 'completed', completedAt: Date.now() } : q))
+  if (result.leveledUp && onLevelUp) {
+    onLevelUp(result.newLevel)
   }
+}
 
   const activeQuests = quests.filter(q => q.status === 'active')
   const completedQuests = quests.filter(q => q.status === 'completed')

@@ -1,37 +1,53 @@
 import { useState } from 'react'
+import { getCharacter } from './lib/storage'
 import CharacterScreen from './screens/CharacterScreen'
 import QuestsScreen from './screens/QuestsScreen'
+import LevelUpScreen from './screens/LevelUpScreen'
+import OnboardingScreen from './screens/OnboardingScreen'
 
 type Screen = 'character' | 'quests'
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('character')
+  const [levelUp, setLevelUp] = useState<number | null>(null)
+  const [isFirstLaunch, setIsFirstLaunch] = useState(() => {
+    const char = getCharacter()
+    return char.name === 'Герой'
+  })
+
+  const handleLevelUp = (level: number) => setLevelUp(level)
+  const handleLevelUpClose = () => setLevelUp(null)
+  const handleOnboardingComplete = () => setIsFirstLaunch(false)
+
+  if (isFirstLaunch) {
+    return <OnboardingScreen onComplete={handleOnboardingComplete} />
+  }
 
   return (
     <div className="h-full bg-gray-950 text-gray-100 flex flex-col max-w-md mx-auto">
       <div className="flex-1 overflow-y-auto" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}>
         {screen === 'character' && <CharacterScreen />}
-        {screen === 'quests' && <QuestsScreen />}
+        {screen === 'quests' && <QuestsScreen onLevelUp={handleLevelUp} />}
       </div>
 
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-gray-900 border-t border-gray-800 flex" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <button
           onClick={() => setScreen('character')}
-          className={`flex-1 py-4 text-sm font-medium transition-colors ${
-            screen === 'character' ? 'text-yellow-400' : 'text-gray-500'
-          }`}
+          className={`flex-1 py-4 text-sm font-medium transition-colors ${screen === 'character' ? 'text-yellow-400' : 'text-gray-500'}`}
         >
           ⚔️ Персонаж
         </button>
         <button
           onClick={() => setScreen('quests')}
-          className={`flex-1 py-4 text-sm font-medium transition-colors ${
-            screen === 'quests' ? 'text-yellow-400' : 'text-gray-500'
-          }`}
+          className={`flex-1 py-4 text-sm font-medium transition-colors ${screen === 'quests' ? 'text-yellow-400' : 'text-gray-500'}`}
         >
           📜 Квесты
         </button>
       </nav>
+
+      {levelUp !== null && (
+        <LevelUpScreen level={levelUp} onClose={handleLevelUpClose} />
+      )}
     </div>
   )
 }
