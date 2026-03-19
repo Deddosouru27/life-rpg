@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { getCharacter } from './lib/storage'
+import { checkAndResetDailyQuests } from './lib/gameLogic'
 import CharacterScreen from './screens/CharacterScreen'
 import QuestsScreen from './screens/QuestsScreen'
 import LogScreen from './screens/LogScreen'
@@ -15,6 +16,10 @@ export default function App() {
     const char = getCharacter()
     return char.name === 'Герой'
   })
+
+  useEffect(() => {
+    checkAndResetDailyQuests()
+  }, [])
 
   if (isFirstLaunch) {
     return <OnboardingScreen onComplete={() => setIsFirstLaunch(false)} />

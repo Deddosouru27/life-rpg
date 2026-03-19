@@ -231,7 +231,9 @@ function QuestCard({ quest, onComplete }: { quest: Quest; onComplete?: (q: Quest
       <div className="flex justify-between items-start">
         <div className="flex-1">
           <div className="flex gap-2 text-xs mb-1">
-            <span className={typeColors[quest.type]}>{quest.type}</span>
+            <span className={typeColors[quest.type]}>
+              {quest.type === 'Daily' ? '🔄 ' : ''}{quest.type}
+            </span>
             <span className={diffColors[quest.difficulty]}>{quest.difficulty}</span>
           </div>
           <p className="font-medium text-gray-100">{quest.title}</p>

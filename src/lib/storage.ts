@@ -14,11 +14,19 @@ export const DEFAULT_CHARACTER: Character = {
   xpToNextLevel: 100,
   gold: 0,
   stats: { strength: 1, intellect: 1, endurance: 1, discipline: 1 },
+  lastDailyReset: 0,
+  currentStreak: 0,
 }
 
 export function getCharacter(): Character {
   const raw = localStorage.getItem(KEYS.character)
-  return raw ? JSON.parse(raw) : DEFAULT_CHARACTER
+  if (!raw) return DEFAULT_CHARACTER
+  const parsed = JSON.parse(raw) as Character
+  // миграция: заполняем отсутствующие поля для существующих пользователей
+  return {
+    ...DEFAULT_CHARACTER,
+    ...parsed,
+  }
 }
 
 export function saveCharacter(character: Character): void {

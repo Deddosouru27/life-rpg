@@ -1,5 +1,5 @@
 import type { Character, Quest, Achievement } from './types'
-import { getAchievements, saveAchievements, addLogEntry } from './storage'
+import { getAchievements, saveAchievements, addLogEntry, getCharacter, saveCharacter, getQuests, saveQuests } from './storage'
 
 export function calcXpToNextLevel(level: number): number {
   return Math.floor(100 * Math.pow(1.4, level - 1))
@@ -11,7 +11,9 @@ export function applyQuestReward(character: Character, quest: Quest): {
   newLevel: number
   newAchievements: Achievement[]
 } {
-  const newXp = character.xp + quest.xpReward
+  const multiplier = quest.type === 'Daily' ? streakXpMultiplier(character.currentStreak) : 1
+  const bonusXp = Math.round(quest.xpReward * multiplier)
+  const newXp = character.xp + bonusXp
   let newLevel = character.level
   let remainingXp = newXp
   let xpToNext = character.xpToNextLevel
@@ -40,7 +42,10 @@ export function applyQuestReward(character: Character, quest: Quest): {
   }
 
   // Лог квеста
-  addLogEntry({ message: `Квест выполнен: «${quest.title}» +${quest.xpReward} XP, +${quest.goldReward} золота`, type: 'quest' })
+  const xpMsg = multiplier > 1
+    ? `+${bonusXp} XP (🔥×${multiplier.toFixed(1)})`
+    : `+${bonusXp} XP`
+  addLogEntry({ message: `Квест выполнен: «${quest.title}» ${xpMsg}, +${quest.goldReward} золота`, type: 'quest' })
 
   if (leveledUp) {
     addLogEntry({ message: `Достигнут уровень ${newLevel}!`, type: 'levelup' })
@@ -131,4 +136,63 @@ export function calcQuestRewards(difficulty: Quest['difficulty']): { xp: number;
     Legendary: { xp: 250, gold: 150 },
   }
   return table[difficulty]
+}
+
+function todayMidnight(): number {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return d.getTime()
+}
+
+/** Вызывается при старте приложения. Сбрасывает Daily квесты и обновляет streak. */
+export function checkAndResetDailyQuests(): void {
+  const today = todayMidnight()
+  const char = getCharacter()
+  if (char.lastDailyReset >= today) return // уже сбрасывали сегодня
+
+  const quests = getQuests()
+  const lastReset = char.lastDailyReset
+  const yesterday = today - 86_400_000
+
+  // Был ли выполнен хотя бы один Daily квест вчера (между lastReset и today)
+  const completedYesterday = quests.some(
+    q => q.type === 'Daily' && q.status === 'completed' && q.completedAt !== undefined
+      && q.completedAt >= lastReset && q.completedAt < today
+  )
+
+  // Пропущен ли день (lastReset старше вчерашнего полуночи)
+  const missedDay = lastReset > 0 && lastReset < yesterday
+
+  let newStreak: number
+  if (lastReset === 0) {
+    // первый запуск
+    newStreak = 0
+  } else if (missedDay || !completedYesterday) {
+    newStreak = 0
+  } else {
+    newStreak = char.currentStreak + 1
+  }
+
+  // Сбрасываем выполненные Daily квесты обратно в active
+  const resetQuests = quests.map(q =>
+    q.type === 'Daily' && q.status === 'completed'
+      ? { ...q, status: 'active' as const, completedAt: undefined }
+      : q
+  )
+
+  saveQuests(resetQuests)
+  saveCharacter({ ...char, lastDailyReset: today, currentStreak: newStreak })
+
+  if (newStreak > 0) {
+    addLogEntry({ message: `🔥 Streak продолжается: ${newStreak} дней подряд!`, type: 'stat' })
+  } else if (lastReset > 0) {
+    addLogEntry({ message: '💤 Daily квесты сброшены. Streak обнулён.', type: 'stat' })
+  }
+
+  window.dispatchEvent(new Event('storage-update'))
+}
+
+/** Бонусный множитель XP за streak (только для Daily квестов). */
+export function streakXpMultiplier(streak: number): number {
+  return 1 + Math.min(Math.floor(streak / 5) * 0.1, 0.5)
 }

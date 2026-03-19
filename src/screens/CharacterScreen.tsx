@@ -28,6 +28,11 @@ export default function CharacterScreen() {
         >
           {rank.icon} {rank.name} · Ур. {char.level}
         </button>
+        {char.currentStreak > 0 && (
+          <p className="mt-1 text-sm text-orange-400">
+            🔥 {char.currentStreak} {streakLabel(char.currentStreak)}
+          </p>
+        )}
       </div>
 
       {/* XP бар */}
@@ -139,6 +144,12 @@ export default function CharacterScreen() {
       )}
     </div>
   )
+}
+
+function streakLabel(days: number): string {
+  if (days % 10 === 1 && days % 100 !== 11) return 'день подряд'
+  if ([2, 3, 4].includes(days % 10) && ![12, 13, 14].includes(days % 100)) return 'дня подряд'
+  return 'дней подряд'
 }
 
 function statLabel(key: string): string {

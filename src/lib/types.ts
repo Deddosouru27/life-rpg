@@ -27,6 +27,8 @@ export interface Character {
     endurance: number
     discipline: number
   }
+  lastDailyReset: number
+  currentStreak: number
 }
 
 export interface Achievement {
