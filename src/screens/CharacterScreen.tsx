@@ -17,56 +17,59 @@ export default function CharacterScreen() {
   const xpPercent = Math.floor((char.xp / char.xpToNextLevel) * 100)
 
   return (
-    <div className="p-4 space-y-6">
-      {/* Шапка персонажа */}
-      <div className="text-center pt-6">
-        <div className="text-6xl mb-2">⚔️</div>
-        <h1 className="text-2xl font-bold text-yellow-400">{char.name}</h1>
+    <div className="p-4 space-y-4" style={{ backgroundColor: '#0a0a0f', minHeight: '100%' }}>
+      {/* Шапка */}
+      <div className="text-center pt-8 pb-2">
+        <div className="text-5xl mb-4">⚔️</div>
+        <h1 className="text-4xl font-extrabold tracking-wider text-white mb-1">
+          {char.name}
+        </h1>
         <button
           onClick={() => setShowRanksModal(true)}
-          className={`mt-1 text-sm font-semibold ${rank.color} hover:opacity-80 transition-opacity`}
+          className={`text-sm font-bold tracking-widest uppercase ${rank.color} hover:opacity-70 transition-opacity`}
         >
-          {rank.icon} {rank.name} · Ур. {char.level}
+          ◆ {rank.name} · УР. {char.level}
         </button>
         {char.currentStreak > 0 && (
-          <p className="mt-1 text-sm text-orange-400">
+          <p className="mt-2 text-sm font-bold text-orange-400 tracking-wide">
             🔥 {char.currentStreak} {streakLabel(char.currentStreak)}
           </p>
         )}
       </div>
 
       {/* XP бар */}
-      <div className="bg-gray-900 rounded-xl p-4 space-y-2">
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-400">Опыт</span>
+      <div className="rounded-xl p-4 space-y-2 border border-white/5" style={{ backgroundColor: '#111118' }}>
+        <div className="flex justify-between text-xs font-semibold tracking-wider uppercase">
+          <span className="text-gray-500">Опыт</span>
           <span className={rank.color}>{char.xp} / {char.xpToNextLevel} XP</span>
         </div>
-        <div className="w-full bg-gray-800 rounded-full h-3">
+        <div className="w-full rounded-full h-2.5" style={{ backgroundColor: '#0a0a0f' }}>
           <div
-            className={`${rank.barColor} h-3 rounded-full transition-all duration-500`}
-            style={{ width: `${xpPercent}%` }}
+            className={`${rank.barColor} h-2.5 rounded-full animate-xp-pulse`}
+            style={{ width: `${xpPercent}%`, transition: 'width 0.6s ease' }}
           />
         </div>
-        <p className="text-xs text-gray-500 text-right">{xpPercent}% до следующего уровня</p>
+        <p className="text-xs text-gray-600 text-right">{xpPercent}% до следующего уровня</p>
       </div>
 
       {/* Золото */}
-      <div className="bg-gray-900 rounded-xl p-4 flex justify-between items-center">
-        <span className="text-gray-400">Золото</span>
-        <span className="text-yellow-400 font-bold text-lg">💰 {char.gold}</span>
+      <div className="rounded-xl p-4 flex justify-between items-center border border-white/5" style={{ backgroundColor: '#111118' }}>
+        <span className="text-gray-500 text-sm font-semibold tracking-wider uppercase">Золото</span>
+        <span className="text-yellow-400 font-extrabold text-lg">💰 {char.gold}</span>
       </div>
 
       {/* Статы */}
-      <div className="bg-gray-900 rounded-xl p-4 space-y-3">
-        <h2 className="text-gray-300 font-semibold mb-2">Характеристики</h2>
+      <div className="rounded-xl p-4 space-y-3 border border-white/5" style={{ backgroundColor: '#111118' }}>
+        <h2 className="text-gray-500 text-xs font-bold tracking-widest uppercase mb-3">Характеристики</h2>
         {Object.entries(char.stats).map(([key, val]) => (
           <div key={key} className="flex justify-between items-center">
-            <span className="text-gray-400 capitalize">{statLabel(key)}</span>
+            <span className="text-gray-400 text-sm">{statLabel(key)}</span>
             <div className="flex gap-1">
               {Array.from({ length: 10 }).map((_, i) => (
                 <div
                   key={i}
-                  className={`w-4 h-2 rounded-sm ${i < val ? rank.barColor : 'bg-gray-700'}`}
+                  className={`w-3.5 h-1.5 rounded-sm ${i < val ? rank.barColor : ''}`}
+                  style={i >= val ? { backgroundColor: '#1f1f2e' } : undefined}
                 />
               ))}
             </div>
@@ -77,65 +80,65 @@ export default function CharacterScreen() {
       {/* Модалка рангов */}
       {showRanksModal && (
         <div
-          className="fixed inset-0 bg-black/80 z-50 flex items-end justify-center p-4"
+          className="fixed inset-0 z-50 flex items-end justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}
           onClick={() => setShowRanksModal(false)}
         >
           <div
-            className="bg-gray-900 rounded-2xl w-full max-w-md p-6 space-y-4"
+            className="rounded-2xl w-full max-w-md p-6 space-y-4 border border-white/5"
+            style={{ backgroundColor: '#111118' }}
             onClick={e => e.stopPropagation()}
           >
             <div className="flex justify-between items-center">
-              <h2 className="text-white font-bold text-lg">Система рангов</h2>
-              <button
-                onClick={() => setShowRanksModal(false)}
-                className="text-gray-500 hover:text-white text-xl"
-              >
-                ✕
-              </button>
+              <h2 className="text-white font-extrabold tracking-wider uppercase text-sm">
+                Система рангов
+              </h2>
+              <button onClick={() => setShowRanksModal(false)} className="text-gray-600 hover:text-white">✕</button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
               {RANKS.map((r) => {
                 const isCurrent = r.name === rank.name
                 const isUnlocked = char.level >= r.minLevel
                 const levelRange = r.maxLevel
-                  ? `${r.minLevel}–${r.maxLevel} уровень`
-                  : `${r.minLevel}+ уровень`
+                  ? `${r.minLevel}–${r.maxLevel} ур.`
+                  : `${r.minLevel}+ ур.`
 
                 return (
                   <div
                     key={r.name}
-                    className={`rounded-xl p-3 flex items-center gap-3 border ${
-                      isCurrent
-                        ? `${r.borderColor} bg-gray-800`
-                        : 'border-gray-800 bg-gray-800/50'
-                    } ${!isUnlocked ? 'opacity-40' : ''}`}
+                    className={`rounded-xl p-3 flex items-center gap-3 border transition-all ${
+                      isCurrent ? `border-current ${r.color}` : 'border-white/5'
+                    } ${!isUnlocked ? 'opacity-30' : ''}`}
+                    style={{ backgroundColor: isCurrent ? '#1a1a2e' : '#0d0d14' }}
                   >
-                    <span className="text-2xl">{r.icon}</span>
+                    <div
+                      className="w-1.5 h-8 rounded-full"
+                      style={{ backgroundColor: isUnlocked ? r.stripColor : '#333' }}
+                    />
                     <div className="flex-1">
-                      <div className={`font-semibold ${isUnlocked ? r.color : 'text-gray-500'}`}>
-                        {r.name}
+                      <div className={`font-bold text-sm ${isUnlocked ? r.color : 'text-gray-600'}`}>
+                        ◆ {r.name}
                       </div>
-                      <div className="text-xs text-gray-500">{levelRange}</div>
+                      <div className="text-xs text-gray-600">{levelRange}</div>
                     </div>
                     {isCurrent && (
-                      <span className={`text-xs font-bold px-2 py-1 rounded-full ${r.barColor} text-gray-900`}>
-                        Текущий
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${r.barColor} text-black`}>
+                        ТЕКУЩИЙ
                       </span>
                     )}
                     {!isCurrent && isUnlocked && (
-                      <span className="text-gray-500 text-lg">✓</span>
+                      <span className="text-gray-600 text-sm">✓</span>
                     )}
                   </div>
                 )
               })}
             </div>
 
-            {/* Прогресс до следующего ранга */}
             {rank.maxLevel && (
-              <div className="pt-2 border-t border-gray-800">
-                <p className="text-xs text-gray-500 text-center">
-                  До следующего ранга: {rank.maxLevel + 1 - char.level} ур.
+              <div className="pt-2 border-t border-white/5">
+                <p className="text-xs text-gray-600 text-center tracking-wide">
+                  До следующего ранга: {rank.maxLevel + 1 - char.level} уровней
                 </p>
               </div>
             )}

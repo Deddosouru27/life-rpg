@@ -144,7 +144,7 @@ function todayMidnight(): number {
   return d.getTime()
 }
 
-/** Вызывается при старте приложения. Сбрасывает Daily квесты и обновляет streak. */
+/** Вызывается при старте приложения. Сбрасывает Daily квесты, проверяет пропуск дня. */
 export function checkAndResetDailyQuests(): void {
   const today = todayMidnight()
   const char = getCharacter()
@@ -154,23 +154,23 @@ export function checkAndResetDailyQuests(): void {
   const lastReset = char.lastDailyReset
   const yesterday = today - 86_400_000
 
-  // Был ли выполнен хотя бы один Daily квест вчера (между lastReset и today)
-  const completedYesterday = quests.some(
+  // Был ли выполнен хотя бы один Daily квест со времени последнего сброса
+  const completedSinceLastReset = quests.some(
     q => q.type === 'Daily' && q.status === 'completed' && q.completedAt !== undefined
-      && q.completedAt >= lastReset && q.completedAt < today
+      && q.completedAt >= lastReset
   )
 
-  // Пропущен ли день (lastReset старше вчерашнего полуночи)
+  // Пропущен ли целый день (lastReset старше вчерашнего полуночи)
   const missedDay = lastReset > 0 && lastReset < yesterday
 
-  let newStreak: number
-  if (lastReset === 0) {
-    // первый запуск
+  let newStreak = char.currentStreak
+  // Streak инкрементируется в момент выполнения квеста (в QuestsScreen).
+  // Здесь только обнуляем если пропущен день или не было выполнений вчера.
+  if (lastReset > 0 && (missedDay || !completedSinceLastReset)) {
     newStreak = 0
-  } else if (missedDay || !completedYesterday) {
-    newStreak = 0
+    addLogEntry({ message: '💤 Daily квесты сброшены. Streak обнулён.', type: 'stat' })
   } else {
-    newStreak = char.currentStreak + 1
+    addLogEntry({ message: '🔄 Daily квесты обновлены!', type: 'stat' })
   }
 
   // Сбрасываем выполненные Daily квесты обратно в active
@@ -182,14 +182,19 @@ export function checkAndResetDailyQuests(): void {
 
   saveQuests(resetQuests)
   saveCharacter({ ...char, lastDailyReset: today, currentStreak: newStreak })
-
-  if (newStreak > 0) {
-    addLogEntry({ message: `🔥 Streak продолжается: ${newStreak} дней подряд!`, type: 'stat' })
-  } else if (lastReset > 0) {
-    addLogEntry({ message: '💤 Daily квесты сброшены. Streak обнулён.', type: 'stat' })
-  }
-
   window.dispatchEvent(new Event('storage-update'))
+}
+
+/** Вызывается при выполнении первого Daily квеста за день — инкрементирует streak. */
+export function incrementStreakIfFirstToday(char: Character, completedQuests: Quest[]): Character {
+  const today = todayMidnight()
+  const alreadyCompletedToday = completedQuests.some(
+    q => q.type === 'Daily' && q.completedAt !== undefined && q.completedAt >= today
+  )
+  if (alreadyCompletedToday) return char // уже инкрементировали сегодня
+  const newStreak = char.currentStreak + 1
+  addLogEntry({ message: `🔥 Streak: ${newStreak} ${newStreak === 1 ? 'день' : 'дней'} подряд!`, type: 'stat' })
+  return { ...char, currentStreak: newStreak }
 }
 
 /** Бонусный множитель XP за streak (только для Daily квестов). */

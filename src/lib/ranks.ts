@@ -2,9 +2,10 @@ export interface Rank {
   name: string
   minLevel: number
   maxLevel: number | null
-  color: string        // Tailwind text color class
-  barColor: string     // Tailwind bg color class (for bars)
-  borderColor: string  // Tailwind border color class
+  color: string
+  barColor: string
+  borderColor: string
+  stripColor: string
   icon: string
 }
 
@@ -13,46 +14,51 @@ export const RANKS: Rank[] = [
     name: 'Новобранец',
     minLevel: 1,
     maxLevel: 4,
-    color: 'text-gray-400',
-    barColor: 'bg-gray-400',
-    borderColor: 'border-gray-400',
-    icon: '🪨',
+    color: 'text-blue-400',
+    barColor: 'bg-blue-500',
+    borderColor: 'border-blue-500',
+    stripColor: '#3b82f6',
+    icon: '◆',
   },
   {
     name: 'Искатель',
     minLevel: 5,
     maxLevel: 9,
-    color: 'text-green-400',
-    barColor: 'bg-green-400',
-    borderColor: 'border-green-400',
-    icon: '🌿',
+    color: 'text-emerald-400',
+    barColor: 'bg-emerald-500',
+    borderColor: 'border-emerald-500',
+    stripColor: '#10b981',
+    icon: '◆',
   },
   {
     name: 'Воин',
     minLevel: 10,
     maxLevel: 19,
-    color: 'text-blue-400',
-    barColor: 'bg-blue-400',
-    borderColor: 'border-blue-400',
-    icon: '⚔️',
+    color: 'text-violet-400',
+    barColor: 'bg-violet-500',
+    borderColor: 'border-violet-500',
+    stripColor: '#8b5cf6',
+    icon: '◆',
   },
   {
     name: 'Ветеран',
     minLevel: 20,
     maxLevel: 29,
     color: 'text-purple-400',
-    barColor: 'bg-purple-400',
-    borderColor: 'border-purple-400',
-    icon: '🛡️',
+    barColor: 'bg-purple-500',
+    borderColor: 'border-purple-500',
+    stripColor: '#a855f7',
+    icon: '◆',
   },
   {
     name: 'Элита',
     minLevel: 30,
     maxLevel: 49,
     color: 'text-orange-400',
-    barColor: 'bg-orange-400',
-    borderColor: 'border-orange-400',
-    icon: '🔥',
+    barColor: 'bg-orange-500',
+    borderColor: 'border-orange-500',
+    stripColor: '#f97316',
+    icon: '◆',
   },
   {
     name: 'Легенда',
@@ -61,7 +67,8 @@ export const RANKS: Rank[] = [
     color: 'text-yellow-400',
     barColor: 'bg-yellow-400',
     borderColor: 'border-yellow-400',
-    icon: '👑',
+    stripColor: '#facc15',
+    icon: '◆',
   },
 ]
 

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Quest, QuestType, QuestDifficulty } from '../lib/types'
 import { getQuests, saveQuests, getCharacter, saveCharacter } from '../lib/storage'
-import { applyQuestReward, calcQuestRewards } from '../lib/gameLogic'
+import { applyQuestReward, calcQuestRewards, incrementStreakIfFirstToday } from '../lib/gameLogic'
 import { generateAIQuest } from '../lib/aiQuest'
 
 interface Props {
@@ -48,14 +48,24 @@ export default function QuestsScreen({ onLevelUp }: Props) {
   }
 
   const completeQuest = (quest: Quest) => {
-  const char = getCharacter()
-  const result = applyQuestReward(char, quest)
-  saveCharacter(result.character)
-  updateQuests(quests.map(q => q.id === quest.id ? { ...q, status: 'completed', completedAt: Date.now() } : q))
-  if (result.leveledUp && onLevelUp) {
-    onLevelUp(result.newLevel)
+    let char = getCharacter()
+
+    // Streak: инкрементируем при первом Daily за сегодня
+    if (quest.type === 'Daily') {
+      const completedQuests = quests.filter(q => q.status === 'completed')
+      char = incrementStreakIfFirstToday(char, completedQuests)
+      saveCharacter(char)
+    }
+
+    const result = applyQuestReward(char, quest)
+    saveCharacter(result.character)
+    updateQuests(quests.map(q =>
+      q.id === quest.id ? { ...q, status: 'completed', completedAt: Date.now() } : q
+    ))
+    if (result.leveledUp && onLevelUp) {
+      onLevelUp(result.newLevel)
+    }
   }
-}
 
   const generateQuest = async () => {
     if (!aiInput.trim()) return
@@ -89,19 +99,20 @@ export default function QuestsScreen({ onLevelUp }: Props) {
   const completedQuests = quests.filter(q => q.status === 'completed')
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 space-y-4" style={{ backgroundColor: '#0a0a0f', minHeight: '100%' }}>
+      {/* Заголовок */}
       <div className="flex justify-between items-center pt-4">
-        <h1 className="text-xl font-bold text-yellow-400">📜 Квесты</h1>
+        <h1 className="text-xl font-extrabold tracking-wider text-white">КВЕСТЫ</h1>
         <div className="flex gap-2">
           <button
             onClick={() => { setShowAIModal(true); setShowForm(false) }}
-            className="bg-purple-600 text-white px-3 py-2 rounded-lg font-semibold text-sm"
+            className="bg-violet-600 hover:bg-violet-500 text-white px-3 py-2 rounded-lg font-bold text-sm tracking-wide transition-colors"
           >
-            ✨ AI Квест
+            ✨ AI
           </button>
           <button
             onClick={() => { setShowForm(!showForm); setShowAIModal(false) }}
-            className="bg-yellow-400 text-gray-950 px-4 py-2 rounded-lg font-semibold text-sm"
+            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm tracking-wide transition-colors"
           >
             + Добавить
           </button>
@@ -110,14 +121,15 @@ export default function QuestsScreen({ onLevelUp }: Props) {
 
       {/* AI Модалка */}
       {showAIModal && (
-        <div className="bg-gray-900 rounded-xl p-4 space-y-3 border border-purple-600/40">
+        <div className="rounded-xl p-4 space-y-3 border border-violet-500/30" style={{ backgroundColor: '#16161f' }}>
           <div className="flex justify-between items-center">
-            <h2 className="text-purple-400 font-semibold text-sm">✨ AI-генерация квеста</h2>
+            <h2 className="text-violet-400 font-bold text-sm tracking-wider">✨ AI-ГЕНЕРАЦИЯ</h2>
             <button onClick={() => setShowAIModal(false)} className="text-gray-500 hover:text-white">✕</button>
           </div>
           <textarea
-            className="w-full bg-gray-800 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-500 resize-none"
-            placeholder="Опиши цель или задачу... (например: «хочу начать бегать» или «сделать презентацию для работы»)"
+            className="w-full rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 resize-none border border-white/5 focus:outline-none focus:border-violet-500/50"
+            style={{ backgroundColor: '#0a0a0f' }}
+            placeholder="Опиши цель или задачу... (например: «хочу начать бегать»)"
             rows={3}
             value={aiInput}
             onChange={e => setAIInput(e.target.value)}
@@ -127,7 +139,7 @@ export default function QuestsScreen({ onLevelUp }: Props) {
           <button
             onClick={generateQuest}
             disabled={aiLoading || !aiInput.trim()}
-            className="w-full bg-purple-600 disabled:opacity-50 text-white py-2 rounded-lg font-semibold text-sm"
+            className="w-full bg-violet-600 disabled:opacity-40 hover:bg-violet-500 text-white py-2 rounded-lg font-bold text-sm tracking-wide transition-colors"
           >
             {aiLoading ? '⏳ Формирую квест...' : '✨ Сгенерировать'}
           </button>
@@ -136,32 +148,36 @@ export default function QuestsScreen({ onLevelUp }: Props) {
 
       {/* Форма добавления */}
       {showForm && (
-        <div className="bg-gray-900 rounded-xl p-4 space-y-3">
+        <div className="rounded-xl p-4 space-y-3 border border-white/5" style={{ backgroundColor: '#16161f' }}>
           <input
-            className="w-full bg-gray-800 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-500"
+            className="w-full rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 border border-white/5 focus:outline-none focus:border-blue-500/50"
+            style={{ backgroundColor: '#0a0a0f' }}
             placeholder="Название квеста"
             value={form.title}
             onChange={e => setForm({ ...form, title: e.target.value })}
           />
           <input
-            className="w-full bg-gray-800 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-500"
+            className="w-full rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 border border-white/5 focus:outline-none focus:border-blue-500/50"
+            style={{ backgroundColor: '#0a0a0f' }}
             placeholder="Описание (необязательно)"
             value={form.description}
             onChange={e => setForm({ ...form, description: e.target.value })}
           />
           <div className="grid grid-cols-2 gap-2">
             <select
-              className="bg-gray-800 rounded-lg px-3 py-2 text-sm text-gray-100"
+              className="rounded-lg px-3 py-2 text-sm text-gray-100 border border-white/5"
+              style={{ backgroundColor: '#0a0a0f' }}
               value={form.type}
               onChange={e => setForm({ ...form, type: e.target.value as QuestType })}
             >
-              <option value="Daily">Daily</option>
+              <option value="Daily">🔄 Daily</option>
               <option value="Side">Side Quest</option>
               <option value="Main">Main Quest</option>
-              <option value="Boss">Boss</option>
+              <option value="Boss">⚡ Boss</option>
             </select>
             <select
-              className="bg-gray-800 rounded-lg px-3 py-2 text-sm text-gray-100"
+              className="rounded-lg px-3 py-2 text-sm text-gray-100 border border-white/5"
+              style={{ backgroundColor: '#0a0a0f' }}
               value={form.difficulty}
               onChange={e => setForm({ ...form, difficulty: e.target.value as QuestDifficulty })}
             >
@@ -171,12 +187,12 @@ export default function QuestsScreen({ onLevelUp }: Props) {
               <option value="Legendary">Legendary</option>
             </select>
           </div>
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-gray-600">
             Награда: {calcQuestRewards(form.difficulty).xp} XP · {calcQuestRewards(form.difficulty).gold} золота
           </div>
           <button
             onClick={addQuest}
-            className="w-full bg-yellow-400 text-gray-950 py-2 rounded-lg font-semibold text-sm"
+            className="w-full bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg font-bold text-sm tracking-wide transition-colors"
           >
             Создать квест
           </button>
@@ -192,17 +208,17 @@ export default function QuestsScreen({ onLevelUp }: Props) {
         </div>
       )}
 
-      {activeQuests.length === 0 && !showForm && (
-        <div className="text-center py-12 text-gray-600">
+      {activeQuests.length === 0 && !showForm && !showAIModal && (
+        <div className="text-center py-16 text-gray-700">
           <div className="text-4xl mb-2">📭</div>
-          <p>Нет активных квестов</p>
+          <p className="text-sm tracking-wide">НЕТ АКТИВНЫХ КВЕСТОВ</p>
         </div>
       )}
 
       {/* Выполненные */}
       {completedQuests.length > 0 && (
         <div className="space-y-2">
-          <h2 className="text-gray-500 text-sm font-medium">Выполнено</h2>
+          <h2 className="text-gray-600 text-xs font-bold tracking-widest uppercase pt-2">Выполнено</h2>
           {completedQuests.map(quest => (
             <QuestCard key={quest.id} quest={quest} />
           ))}
@@ -212,47 +228,80 @@ export default function QuestsScreen({ onLevelUp }: Props) {
   )
 }
 
+const TYPE_STRIP: Record<QuestType, string> = {
+  Daily: '#3b82f6',
+  Side: '#10b981',
+  Main: '#eab308',
+  Boss: '#ef4444',
+}
+
+const TYPE_LABEL: Record<QuestType, string> = {
+  Daily: '🔄 Daily',
+  Side: 'Side Quest',
+  Main: 'Main Quest',
+  Boss: '⚡ Boss',
+}
+
+const TYPE_TEXT: Record<QuestType, string> = {
+  Daily: 'text-blue-400',
+  Side: 'text-emerald-400',
+  Main: 'text-yellow-400',
+  Boss: 'text-red-400',
+}
+
+const DIFF_TEXT: Record<QuestDifficulty, string> = {
+  Easy: 'text-emerald-500',
+  Medium: 'text-blue-400',
+  Hard: 'text-orange-400',
+  Legendary: 'text-red-400',
+}
+
 function QuestCard({ quest, onComplete }: { quest: Quest; onComplete?: (q: Quest) => void }) {
-  const typeColors: Record<QuestType, string> = {
-    Daily: 'text-blue-400',
-    Side: 'text-green-400',
-    Main: 'text-yellow-400',
-    Boss: 'text-red-400',
-  }
-  const diffColors: Record<QuestDifficulty, string> = {
-    Easy: 'text-green-400',
-    Medium: 'text-yellow-400',
-    Hard: 'text-orange-400',
-    Legendary: 'text-red-400',
-  }
+  const isBoss = quest.type === 'Boss' && quest.status === 'active'
+  const isDone = quest.status === 'completed'
 
   return (
-    <div className={`bg-gray-900 rounded-xl p-4 space-y-2 ${quest.status === 'completed' ? 'opacity-50' : ''}`}>
-      <div className="flex justify-between items-start">
-        <div className="flex-1">
-          <div className="flex gap-2 text-xs mb-1">
-            <span className={typeColors[quest.type]}>
-              {quest.type === 'Daily' ? '🔄 ' : ''}{quest.type}
-            </span>
-            <span className={diffColors[quest.difficulty]}>{quest.difficulty}</span>
+    <div
+      className={`relative rounded-xl overflow-hidden ${isDone ? 'opacity-40' : ''} ${isBoss ? 'ring-1 ring-red-500/40' : ''}`}
+      style={{ backgroundColor: '#111118' }}
+    >
+      {/* Цветная полоска слева */}
+      <div
+        className="absolute left-0 top-0 bottom-0 w-[3px]"
+        style={{ backgroundColor: TYPE_STRIP[quest.type] }}
+      />
+
+      <div className="p-4 pl-5">
+        <div className="flex justify-between items-start">
+          <div className="flex-1">
+            <div className="flex gap-2 text-xs mb-1">
+              <span className={`font-semibold ${TYPE_TEXT[quest.type]}`}>
+                {TYPE_LABEL[quest.type]}
+              </span>
+              <span className={DIFF_TEXT[quest.difficulty]}>{quest.difficulty}</span>
+            </div>
+            <p className="font-bold text-gray-100 tracking-wide">{quest.title}</p>
+            {quest.description && (
+              <p className="text-xs text-gray-500 mt-1 leading-relaxed">{quest.description}</p>
+            )}
           </div>
-          <p className="font-medium text-gray-100">{quest.title}</p>
-          {quest.description && <p className="text-xs text-gray-500 mt-1">{quest.description}</p>}
+
+          {quest.status === 'active' && onComplete && (
+            <button
+              onClick={() => onComplete(quest)}
+              className="ml-3 shrink-0 bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold tracking-wide transition-colors"
+            >
+              ✓ Готово
+            </button>
+          )}
+          {isDone && (
+            <span className="ml-3 text-emerald-500 text-xs font-bold">✓</span>
+          )}
         </div>
-        {quest.status === 'active' && onComplete && (
-          <button
-            onClick={() => onComplete(quest)}
-            className="ml-3 bg-yellow-400 text-gray-950 px-3 py-1 rounded-lg text-xs font-bold"
-          >
-            ✓ Готово
-          </button>
-        )}
-        {quest.status === 'completed' && (
-          <span className="ml-3 text-green-400 text-xs">✓ Выполнено</span>
-        )}
-      </div>
-      <div className="text-xs text-gray-600">
-        +{quest.xpReward} XP · +{quest.goldReward} золота
+
+        <div className="text-xs text-gray-600 mt-2">
+          +{quest.xpReward} XP · +{quest.goldReward} зол.
+        </div>
       </div>
     </div>
   )
