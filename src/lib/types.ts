@@ -15,6 +15,7 @@ export interface Quest {
   completedAt?: number
   dueTime?: string
   reminderMinutes?: number
+  xpGranted?: number
 }
 
 export interface Character {
@@ -31,6 +32,7 @@ export interface Character {
   }
   lastDailyReset: number
   currentStreak: number
+  lastStreakDate: string
 }
 
 export interface Achievement {

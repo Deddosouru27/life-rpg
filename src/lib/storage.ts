@@ -16,6 +16,7 @@ export const DEFAULT_CHARACTER: Character = {
   stats: { strength: 1, intellect: 1, endurance: 1, discipline: 1 },
   lastDailyReset: 0,
   currentStreak: 0,
+  lastStreakDate: '',
 }
 
 export function getCharacter(): Character {

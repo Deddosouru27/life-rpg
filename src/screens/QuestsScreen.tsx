@@ -61,15 +61,16 @@ export default function QuestsScreen({ onLevelUp }: Props) {
     let char = getCharacter()
 
     if (quest.type === 'Daily') {
-      const completedQuests = quests.filter(q => q.status === 'completed')
-      char = incrementStreakIfFirstToday(char, completedQuests)
+      char = incrementStreakIfFirstToday(char)
       saveCharacter(char)
     }
 
     const result = applyQuestReward(char, quest)
     saveCharacter(result.character)
     updateQuests(quests.map(q =>
-      q.id === quest.id ? { ...q, status: 'completed', completedAt: Date.now() } : q
+      q.id === quest.id
+        ? { ...q, status: 'completed', completedAt: Date.now(), xpGranted: result.xpGranted }
+        : q
     ))
     if (result.leveledUp && onLevelUp) {
       onLevelUp(result.newLevel)
@@ -78,11 +79,10 @@ export default function QuestsScreen({ onLevelUp }: Props) {
 
   const undoQuest = (quest: Quest) => {
     const char = getCharacter()
-    const updated = undoQuestReward(char, quest)
+    const updated = undoQuestReward(char, quest, quests)
     saveCharacter(updated)
-    window.dispatchEvent(new Event('storage-update'))
     updateQuests(quests.map(q =>
-      q.id === quest.id ? { ...q, status: 'active', completedAt: undefined } : q
+      q.id === quest.id ? { ...q, status: 'active', completedAt: undefined, xpGranted: undefined } : q
     ))
   }
 

@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react'
 import type { Character } from '../lib/types'
 import { getCharacter } from '../lib/storage'
 import { getRank, RANKS } from '../lib/ranks'
+import { streakXpMultiplier } from '../lib/gameLogic'
 
 export default function CharacterScreen() {
   const [char, setChar] = useState<Character>(getCharacter())
   const [showRanksModal, setShowRanksModal] = useState(false)
+  const [showStreakModal, setShowStreakModal] = useState(false)
 
   useEffect(() => {
     const onStorage = () => setChar(getCharacter())
@@ -31,9 +33,12 @@ export default function CharacterScreen() {
           ◆ {rank.name} · УР. {char.level}
         </button>
         {char.currentStreak > 0 && (
-          <p className="mt-2 text-sm font-bold text-orange-400 tracking-wide">
+          <button
+            onClick={() => setShowStreakModal(true)}
+            className="mt-2 text-sm font-bold text-orange-400 tracking-wide hover:opacity-70 transition-opacity"
+          >
             🔥 {char.currentStreak} {streakLabel(char.currentStreak)}
-          </p>
+          </button>
         )}
       </div>
 
@@ -142,6 +147,64 @@ export default function CharacterScreen() {
                 </p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Модалка стрика */}
+      {showStreakModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}
+          onClick={() => setShowStreakModal(false)}
+        >
+          <div
+            className="rounded-2xl w-full max-w-md p-6 space-y-4 border border-white/5"
+            style={{ backgroundColor: '#111118' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center">
+              <h2 className="text-white font-extrabold tracking-wider uppercase text-sm">
+                🔥 Серия дней
+              </h2>
+              <button onClick={() => setShowStreakModal(false)} className="text-gray-600 hover:text-white">✕</button>
+            </div>
+
+            <div className="text-center py-2">
+              <p className="text-6xl font-extrabold text-orange-400" style={{ textShadow: '0 0 40px #f97316' }}>
+                {char.currentStreak}
+              </p>
+              <p className="text-gray-500 text-sm mt-1 tracking-wide">
+                {streakLabel(char.currentStreak)}
+              </p>
+            </div>
+
+            <p className="text-gray-400 text-xs leading-relaxed text-center">
+              Выполняй хотя бы 1 Daily квест каждый день чтобы поддерживать серию.
+              Пропустишь день — серия сгорит.
+            </p>
+
+            <div className="rounded-xl p-3 border border-orange-500/20 space-y-1" style={{ backgroundColor: '#1a1008' }}>
+              <p className="text-orange-400 text-xs font-bold tracking-wider uppercase">Бонус к XP за Daily</p>
+              {[5, 10, 15, 20, 25].map(days => {
+                const mult = streakXpMultiplier(days)
+                const isActive = char.currentStreak >= days
+                return (
+                  <div key={days} className={`flex justify-between text-xs ${isActive ? 'text-orange-300' : 'text-gray-600'}`}>
+                    <span>{days}+ дней подряд</span>
+                    <span className="font-bold">×{mult.toFixed(1)} XP {isActive ? '✓' : ''}</span>
+                  </div>
+                )
+              })}
+              <p className="text-gray-600 text-xs pt-1">Максимум: ×1.5 при 25+ днях</p>
+            </div>
+
+            <button
+              onClick={() => setShowStreakModal(false)}
+              className="w-full bg-orange-600 hover:bg-orange-500 text-white py-2 rounded-lg font-bold text-sm tracking-wide transition-colors"
+            >
+              Понятно
+            </button>
           </div>
         </div>
       )}
