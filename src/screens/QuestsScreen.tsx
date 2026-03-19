@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Quest, QuestType, QuestDifficulty } from '../lib/types'
 import { getQuests, saveQuests, getCharacter, saveCharacter } from '../lib/storage'
 import { applyQuestReward, calcQuestRewards } from '../lib/gameLogic'
+import { generateAIQuest } from '../lib/aiQuest'
 
 interface Props {
   onLevelUp?: (level: number) => void
@@ -16,6 +17,10 @@ export default function QuestsScreen({ onLevelUp }: Props) {
     type: 'Daily' as QuestType,
     difficulty: 'Medium' as QuestDifficulty,
   })
+  const [showAIModal, setShowAIModal] = useState(false)
+  const [aiInput, setAIInput] = useState('')
+  const [aiLoading, setAILoading] = useState(false)
+  const [aiError, setAIError] = useState('')
 
   const updateQuests = (updated: Quest[]) => {
     saveQuests(updated)
@@ -52,6 +57,34 @@ export default function QuestsScreen({ onLevelUp }: Props) {
   }
 }
 
+  const generateQuest = async () => {
+    if (!aiInput.trim()) return
+    setAILoading(true)
+    setAIError('')
+    try {
+      const result = await generateAIQuest(aiInput.trim())
+      const rewards = calcQuestRewards(result.difficulty)
+      const newQuest: Quest = {
+        id: Date.now().toString(),
+        title: result.title,
+        description: result.description,
+        type: result.type,
+        difficulty: result.difficulty,
+        status: 'active',
+        xpReward: rewards.xp,
+        goldReward: rewards.gold,
+        createdAt: Date.now(),
+      }
+      updateQuests([newQuest, ...quests])
+      setAIInput('')
+      setShowAIModal(false)
+    } catch (e) {
+      setAIError(e instanceof Error ? e.message : 'Ошибка генерации')
+    } finally {
+      setAILoading(false)
+    }
+  }
+
   const activeQuests = quests.filter(q => q.status === 'active')
   const completedQuests = quests.filter(q => q.status === 'completed')
 
@@ -59,13 +92,47 @@ export default function QuestsScreen({ onLevelUp }: Props) {
     <div className="p-4 space-y-4">
       <div className="flex justify-between items-center pt-4">
         <h1 className="text-xl font-bold text-yellow-400">📜 Квесты</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-yellow-400 text-gray-950 px-4 py-2 rounded-lg font-semibold text-sm"
-        >
-          + Добавить
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => { setShowAIModal(true); setShowForm(false) }}
+            className="bg-purple-600 text-white px-3 py-2 rounded-lg font-semibold text-sm"
+          >
+            ✨ AI Квест
+          </button>
+          <button
+            onClick={() => { setShowForm(!showForm); setShowAIModal(false) }}
+            className="bg-yellow-400 text-gray-950 px-4 py-2 rounded-lg font-semibold text-sm"
+          >
+            + Добавить
+          </button>
+        </div>
       </div>
+
+      {/* AI Модалка */}
+      {showAIModal && (
+        <div className="bg-gray-900 rounded-xl p-4 space-y-3 border border-purple-600/40">
+          <div className="flex justify-between items-center">
+            <h2 className="text-purple-400 font-semibold text-sm">✨ AI-генерация квеста</h2>
+            <button onClick={() => setShowAIModal(false)} className="text-gray-500 hover:text-white">✕</button>
+          </div>
+          <textarea
+            className="w-full bg-gray-800 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-500 resize-none"
+            placeholder="Опиши цель или задачу... (например: «хочу начать бегать» или «сделать презентацию для работы»)"
+            rows={3}
+            value={aiInput}
+            onChange={e => setAIInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) generateQuest() }}
+          />
+          {aiError && <p className="text-red-400 text-xs">{aiError}</p>}
+          <button
+            onClick={generateQuest}
+            disabled={aiLoading || !aiInput.trim()}
+            className="w-full bg-purple-600 disabled:opacity-50 text-white py-2 rounded-lg font-semibold text-sm"
+          >
+            {aiLoading ? '⏳ Формирую квест...' : '✨ Сгенерировать'}
+          </button>
+        </div>
+      )}
 
       {/* Форма добавления */}
       {showForm && (
