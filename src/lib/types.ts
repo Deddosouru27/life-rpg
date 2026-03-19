@@ -13,6 +13,8 @@ export interface Quest {
   goldReward: number
   createdAt: number
   completedAt?: number
+  dueTime?: string
+  reminderMinutes?: number
 }
 
 export interface Character {

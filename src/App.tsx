@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { getCharacter } from './lib/storage'
+import { getCharacter, getQuests } from './lib/storage'
 import { checkAndResetDailyQuests } from './lib/gameLogic'
+import { scheduleQuestNotifications } from './lib/notifications'
 import CharacterScreen from './screens/CharacterScreen'
 import QuestsScreen from './screens/QuestsScreen'
 import LogScreen from './screens/LogScreen'
@@ -25,6 +26,7 @@ export default function App() {
 
   useEffect(() => {
     checkAndResetDailyQuests()
+    scheduleQuestNotifications(getQuests())
   }, [])
 
   if (isFirstLaunch) {

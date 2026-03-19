@@ -1,16 +1,38 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 
 interface Props {
   level: number
   onClose: () => void
 }
 
+interface Particle {
+  x: number
+  y: number
+  size: number
+  duration: number
+  delay: number
+  color: string
+}
+
+const COLORS = ['#facc15', '#fb923c', '#fde68a', '#ffffff', '#fef08a', '#f59e0b']
+
 export default function LevelUpScreen({ level, onClose }: Props) {
   const [visible, setVisible] = useState(false)
 
+  const particles = useMemo<Particle[]>(() =>
+    Array.from({ length: 35 }, () => ({
+      x: Math.random() * 100,
+      y: 30 + Math.random() * 60,
+      size: Math.random() * 5 + 2,
+      duration: Math.random() * 3 + 2.5,
+      delay: Math.random() * 5,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+    }))
+  , [])
+
   useEffect(() => {
     setTimeout(() => setVisible(true), 50)
-    const timer = setTimeout(() => handleClose(), 4000)
+    const timer = setTimeout(() => handleClose(), 7000)
     return () => clearTimeout(timer)
   }, [])
 
@@ -29,18 +51,28 @@ export default function LevelUpScreen({ level, onClose }: Props) {
         transition: 'opacity 0.5s ease',
       }}
     >
+      <style>{`
+        @keyframes float-particle {
+          0%   { transform: translateY(0px) scale(1); opacity: 1; }
+          70%  { opacity: 0.6; }
+          100% { transform: translateY(-180px) scale(0.2); opacity: 0; }
+        }
+      `}</style>
+
       {/* Частицы */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {Array.from({ length: 20 }).map((_, i) => (
+        {particles.map((p, i) => (
           <div
             key={i}
-            className="absolute w-1 h-1 bg-yellow-400 rounded-full"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              opacity: visible ? Math.random() : 0,
-              transform: visible ? `scale(${Math.random() * 3 + 1})` : 'scale(0)',
-              transition: `all ${Math.random() * 2 + 1}s ease`,
+              position: 'absolute',
+              left: `${p.x}%`,
+              top: `${p.y}%`,
+              width: `${p.size}px`,
+              height: `${p.size}px`,
+              borderRadius: '50%',
+              backgroundColor: p.color,
+              animation: `float-particle ${p.duration}s ease-in-out ${p.delay}s infinite`,
             }}
           />
         ))}

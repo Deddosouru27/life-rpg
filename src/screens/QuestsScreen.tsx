@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import type { Quest, QuestType, QuestDifficulty } from '../lib/types'
 import { getQuests, saveQuests, getCharacter, saveCharacter } from '../lib/storage'
-import { applyQuestReward, calcQuestRewards, incrementStreakIfFirstToday } from '../lib/gameLogic'
+import { applyQuestReward, calcQuestRewards, incrementStreakIfFirstToday, undoQuestReward } from '../lib/gameLogic'
 import { generateAIQuest } from '../lib/aiQuest'
+import { requestNotificationPermission, scheduleQuestNotifications } from '../lib/notifications'
 
 interface Props {
   onLevelUp?: (level: number) => void
@@ -16,16 +17,23 @@ export default function QuestsScreen({ onLevelUp }: Props) {
     description: '',
     type: 'Daily' as QuestType,
     difficulty: 'Medium' as QuestDifficulty,
+    dueTimeMode: 'none' as 'none' | 'time',
+    dueTime: '',
+    reminderMinutes: 15,
   })
   const [showAIModal, setShowAIModal] = useState(false)
   const [aiInput, setAIInput] = useState('')
   const [aiLoading, setAILoading] = useState(false)
   const [aiError, setAIError] = useState('')
+  const [aiDueTimeMode, setAIDueTimeMode] = useState<'none' | 'time'>('none')
+  const [aiDueTime, setAIDueTime] = useState('')
+  const [aiReminderMinutes, setAIReminderMinutes] = useState(15)
 
   const updateQuests = (updated: Quest[]) => {
     saveQuests(updated)
     setQuests(updated)
     window.dispatchEvent(new Event('storage-update'))
+    scheduleQuestNotifications(updated)
   }
 
   const addQuest = () => {
@@ -41,16 +49,17 @@ export default function QuestsScreen({ onLevelUp }: Props) {
       xpReward: rewards.xp,
       goldReward: rewards.gold,
       createdAt: Date.now(),
+      dueTime: form.dueTimeMode === 'time' && form.dueTime ? form.dueTime : undefined,
+      reminderMinutes: form.dueTimeMode === 'time' && form.dueTime ? form.reminderMinutes : undefined,
     }
     updateQuests([newQuest, ...quests])
-    setForm({ title: '', description: '', type: 'Daily', difficulty: 'Medium' })
+    setForm({ title: '', description: '', type: 'Daily', difficulty: 'Medium', dueTimeMode: 'none', dueTime: '', reminderMinutes: 15 })
     setShowForm(false)
   }
 
   const completeQuest = (quest: Quest) => {
     let char = getCharacter()
 
-    // Streak: инкрементируем при первом Daily за сегодня
     if (quest.type === 'Daily') {
       const completedQuests = quests.filter(q => q.status === 'completed')
       char = incrementStreakIfFirstToday(char, completedQuests)
@@ -65,6 +74,16 @@ export default function QuestsScreen({ onLevelUp }: Props) {
     if (result.leveledUp && onLevelUp) {
       onLevelUp(result.newLevel)
     }
+  }
+
+  const undoQuest = (quest: Quest) => {
+    const char = getCharacter()
+    const updated = undoQuestReward(char, quest)
+    saveCharacter(updated)
+    window.dispatchEvent(new Event('storage-update'))
+    updateQuests(quests.map(q =>
+      q.id === quest.id ? { ...q, status: 'active', completedAt: undefined } : q
+    ))
   }
 
   const generateQuest = async () => {
@@ -84,9 +103,14 @@ export default function QuestsScreen({ onLevelUp }: Props) {
         xpReward: rewards.xp,
         goldReward: rewards.gold,
         createdAt: Date.now(),
+        dueTime: aiDueTimeMode === 'time' && aiDueTime ? aiDueTime : undefined,
+        reminderMinutes: aiDueTimeMode === 'time' && aiDueTime ? aiReminderMinutes : undefined,
       }
       updateQuests([newQuest, ...quests])
       setAIInput('')
+      setAIDueTimeMode('none')
+      setAIDueTime('')
+      setAIReminderMinutes(15)
       setShowAIModal(false)
     } catch (e) {
       setAIError(e instanceof Error ? e.message : 'Ошибка генерации')
@@ -134,6 +158,14 @@ export default function QuestsScreen({ onLevelUp }: Props) {
             value={aiInput}
             onChange={e => setAIInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) generateQuest() }}
+          />
+          <TimeFields
+            mode={aiDueTimeMode}
+            dueTime={aiDueTime}
+            reminderMinutes={aiReminderMinutes}
+            onModeChange={async (m) => { setAIDueTimeMode(m); if (m === 'time') await requestNotificationPermission() }}
+            onTimeChange={setAIDueTime}
+            onReminderChange={setAIReminderMinutes}
           />
           {aiError && <p className="text-red-400 text-xs">{aiError}</p>}
           <button
@@ -187,6 +219,14 @@ export default function QuestsScreen({ onLevelUp }: Props) {
               <option value="Legendary">Legendary</option>
             </select>
           </div>
+          <TimeFields
+            mode={form.dueTimeMode}
+            dueTime={form.dueTime}
+            reminderMinutes={form.reminderMinutes}
+            onModeChange={async (m) => { setForm({ ...form, dueTimeMode: m }); if (m === 'time') await requestNotificationPermission() }}
+            onTimeChange={t => setForm({ ...form, dueTime: t })}
+            onReminderChange={r => setForm({ ...form, reminderMinutes: r })}
+          />
           <div className="text-xs text-gray-600">
             Награда: {calcQuestRewards(form.difficulty).xp} XP · {calcQuestRewards(form.difficulty).gold} золота
           </div>
@@ -220,13 +260,81 @@ export default function QuestsScreen({ onLevelUp }: Props) {
         <div className="space-y-2">
           <h2 className="text-gray-600 text-xs font-bold tracking-widest uppercase pt-2">Выполнено</h2>
           {completedQuests.map(quest => (
-            <QuestCard key={quest.id} quest={quest} />
+            <QuestCard key={quest.id} quest={quest} onUndo={undoQuest} />
           ))}
         </div>
       )}
     </div>
   )
 }
+
+// ── Time fields sub-component ──────────────────────────────────────────────
+
+interface TimeFieldsProps {
+  mode: 'none' | 'time'
+  dueTime: string
+  reminderMinutes: number
+  onModeChange: (m: 'none' | 'time') => void
+  onTimeChange: (t: string) => void
+  onReminderChange: (r: number) => void
+}
+
+function TimeFields({ mode, dueTime, reminderMinutes, onModeChange, onTimeChange, onReminderChange }: TimeFieldsProps) {
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => onModeChange('none')}
+          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+            mode === 'none'
+              ? 'bg-blue-600 text-white'
+              : 'text-gray-500 border border-white/5'
+          }`}
+          style={mode !== 'none' ? { backgroundColor: '#0a0a0f' } : undefined}
+        >
+          На день
+        </button>
+        <button
+          type="button"
+          onClick={() => onModeChange('time')}
+          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+            mode === 'time'
+              ? 'bg-blue-600 text-white'
+              : 'text-gray-500 border border-white/5'
+          }`}
+          style={mode !== 'time' ? { backgroundColor: '#0a0a0f' } : undefined}
+        >
+          Ко времени
+        </button>
+      </div>
+      {mode === 'time' && (
+        <>
+          <input
+            type="time"
+            className="w-full rounded-lg px-3 py-2 text-sm text-gray-100 border border-white/5 focus:outline-none focus:border-blue-500/50"
+            style={{ backgroundColor: '#0a0a0f' }}
+            value={dueTime}
+            onChange={e => onTimeChange(e.target.value)}
+          />
+          <select
+            className="w-full rounded-lg px-3 py-2 text-sm text-gray-100 border border-white/5"
+            style={{ backgroundColor: '#0a0a0f' }}
+            value={reminderMinutes}
+            onChange={e => onReminderChange(Number(e.target.value))}
+          >
+            <option value={5}>⏰ Напомнить за 5 минут</option>
+            <option value={15}>⏰ Напомнить за 15 минут</option>
+            <option value={30}>⏰ Напомнить за 30 минут</option>
+            <option value={60}>⏰ Напомнить за 1 час</option>
+          </select>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ── Quest card ─────────────────────────────────────────────────────────────
 
 const TYPE_STRIP: Record<QuestType, string> = {
   Daily: '#3b82f6',
@@ -256,7 +364,15 @@ const DIFF_TEXT: Record<QuestDifficulty, string> = {
   Legendary: 'text-red-400',
 }
 
-function QuestCard({ quest, onComplete }: { quest: Quest; onComplete?: (q: Quest) => void }) {
+function QuestCard({
+  quest,
+  onComplete,
+  onUndo,
+}: {
+  quest: Quest
+  onComplete?: (q: Quest) => void
+  onUndo?: (q: Quest) => void
+}) {
   const isBoss = quest.type === 'Boss' && quest.status === 'active'
   const isDone = quest.status === 'completed'
 
@@ -295,12 +411,24 @@ function QuestCard({ quest, onComplete }: { quest: Quest; onComplete?: (q: Quest
             </button>
           )}
           {isDone && (
-            <span className="ml-3 text-emerald-500 text-xs font-bold">✓</span>
+            <div className="ml-3 flex items-center gap-2">
+              <span className="text-emerald-500 text-xs font-bold">✓</span>
+              {onUndo && (
+                <button
+                  onClick={() => onUndo(quest)}
+                  className="text-gray-600 hover:text-orange-400 text-xs font-bold transition-colors"
+                  title="Отменить выполнение"
+                >
+                  ↩
+                </button>
+              )}
+            </div>
           )}
         </div>
 
-        <div className="text-xs text-gray-600 mt-2">
-          +{quest.xpReward} XP · +{quest.goldReward} зол.
+        <div className="text-xs text-gray-600 mt-2 flex items-center gap-2">
+          <span>+{quest.xpReward} XP · +{quest.goldReward} зол.</span>
+          {quest.dueTime && <span>🕐 {quest.dueTime}</span>}
         </div>
       </div>
     </div>

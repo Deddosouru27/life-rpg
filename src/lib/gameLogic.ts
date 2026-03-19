@@ -128,6 +128,16 @@ function checkAchievements(oldChar: Character, newChar: Character, leveledUp: bo
   return newlyUnlocked
 }
 
+export function undoQuestReward(character: Character, quest: Quest): Character {
+  const newChar: Character = {
+    ...character,
+    xp: Math.max(0, character.xp - quest.xpReward),
+    gold: Math.max(0, character.gold - quest.goldReward),
+  }
+  addLogEntry({ message: `Квест отменён: «${quest.title}» -${quest.xpReward} XP, -${quest.goldReward} золота`, type: 'quest' })
+  return newChar
+}
+
 export function calcQuestRewards(difficulty: Quest['difficulty']): { xp: number; gold: number } {
   const table = {
     Easy:      { xp: 20,  gold: 10  },
