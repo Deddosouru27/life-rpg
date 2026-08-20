@@ -1,26 +1,72 @@
-/** @type {import('tailwindcss').Config} */
+/**
+ * Tailwind здесь отвечает ТОЛЬКО за раскладку и утилиты
+ * (flex, grid, отступы, truncate, aspect-ratio).
+ *
+ * Цвета, типографика, тени и движение живут в CSS-токенах
+ * (src/styles/tokens.css) и в компонентных классах (src/styles.css).
+ * Дублировать палитру здесь нельзя: это создало бы два источника истины,
+ * и половина значений неизбежно разъехалась бы.
+ *
+ * @type {import('tailwindcss').Config}
+ */
 export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
+    /**
+     * Шкала отступов ЗАМЕНЯЕТСЯ, а не расширяется.
+     *
+     * При `extend` дефолтная шкала Tailwind остаётся доступной, и рядом с
+     * `mt-4` спокойно живёт `mt-1.5` (6px) или `mt-0.5` (2px) — значения вне
+     * сетки 4/8. Правило «только токены дизайн-системы» при этом соблюдать
+     * невозможно: нарушение не отличить от нормы, оно просто компилируется.
+     *
+     * После замены класс вне шкалы не собирается вообще. Нарушение перестаёт
+     * быть вопросом дисциплины и становится ошибкой сборки.
+     */
+    spacing: {
+      0: '0px',
+      px: '1px',
+      1: '4px',
+      2: '8px',
+      3: '12px',
+      4: '16px',
+      5: '20px',
+      6: '24px',
+      8: '32px',
+      10: '40px',
+      12: '48px',
+      16: '64px',
+      20: '80px',
+      24: '96px',
+    },
     extend: {
-      colors: {
-        void: '#0a0a0f',
-        surface: '#111118',
-        'surface-2': '#16161f',
+      borderRadius: {
+        sm: '2px',
+        md: '4px',
+        lg: '10px',
       },
-      animation: {
-        'xp-pulse': 'xp-pulse 2.5s ease-in-out infinite',
-      },
-      keyframes: {
-        'xp-pulse': {
-          '0%, 100%': { opacity: '1' },
-          '50%': { opacity: '0.65' },
-        },
+      maxWidth: {
+        content: '480px',
       },
     },
   },
+  /**
+   * Классы, которые собираются в рантайме и потому не видны сканеру Tailwind.
+   * Без safelist они вычищаются из production-сборки, и вёрстка ломается
+   * только в собранной версии — dev при этом выглядит нормально.
+   */
+  safelist: [
+    'gauge-xp',
+    'gauge-health',
+    'gauge-danger',
+    'gauge-season',
+    'btn-primary',
+    'btn-secondary',
+    'btn-ghost',
+    'btn-danger',
+    'surface',
+    'surface-raised',
+    'surface-accent',
+  ],
   plugins: [],
-}
+};

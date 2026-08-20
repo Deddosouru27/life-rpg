@@ -1,0 +1,665 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Шрифты — локальные файлы из @fontsource, ни одного запроса к CDN.
+   Только нужные subsets и начертания: бандл и офлайн важнее удобства.
+
+   Cinzel из первой версии удалён: у него НЕТ кириллицы, поэтому все
+   русские заголовки молча падали в системный Georgia.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/*
+   Display — Forum (Cyreal). Римские капитальные пропорции, лапидарный
+   рисунок: буква выглядит ВЫРЕЗАННОЙ, а не набранной. Ровно это отличает
+   интерфейсы Diablo IV и Elden Ring от «фэнтези-шрифта» — там заголовок
+   читается как надпись на камне, а не как костюм.
+
+   Почему не Cormorant Garamond, который стоял здесь раньше: это ренессансная
+   антиква с тонким штрихом и высоким контрастом. На чёрном фоне при 26–34px
+   она истончается и попадает ровно в самый растиражированный приём
+   («высококонтрастная антиква на тёмном») — то есть перестаёт быть выбором.
+   Forum одноначертательный: его набирают капителью с разрядкой, а не жирным.
+
+   Кириллица есть — это обязательное условие: Cinzel из самой первой версии
+   был удалён именно потому, что все русские заголовки молча падали в Georgia.
+*/
+@import '@fontsource/forum/cyrillic-400.css';
+@import '@fontsource/forum/cyrillic-ext-400.css';
+@import '@fontsource/forum/latin-400.css';
+
+/* Body — Spectral (спроектирован для экранного чтения) */
+@import '@fontsource/spectral/cyrillic-400.css';
+@import '@fontsource/spectral/cyrillic-500.css';
+@import '@fontsource/spectral/cyrillic-600.css';
+@import '@fontsource/spectral/latin-400.css';
+@import '@fontsource/spectral/latin-500.css';
+@import '@fontsource/spectral/latin-600.css';
+
+/* Numeric — IBM Plex Mono (табличные цифры, голос гроссбуха) */
+@import '@fontsource/ibm-plex-mono/cyrillic-400.css';
+@import '@fontsource/ibm-plex-mono/cyrillic-500.css';
+@import '@fontsource/ibm-plex-mono/latin-400.css';
+@import '@fontsource/ibm-plex-mono/latin-500.css';
+
+@import './styles/tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════════
+   БАЗА
+   ═══════════════════════════════════════════════════════════════════ */
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    background: var(--bg-base);
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    color: var(--fg-primary);
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    line-height: var(--text-body-lh);
+    background-color: var(--bg-base);
+    /* Освещённая страница: два тёплых пятна ≤7%. Без узора поверх контента. */
+    background-image:
+      radial-gradient(ellipse 130% 55% at 50% -8%, rgba(201, 162, 39, 0.07), transparent 62%),
+      radial-gradient(ellipse 100% 45% at 50% 108%, rgba(142, 51, 36, 0.05), transparent 66%);
+    background-attachment: fixed;
+    overscroll-behavior-y: none;
+    /*
+      ЗАПРЕЩЕНО добавлять сюда filter / transform / backdrop-filter / will-change.
+      Любое из них создаёт containing block и превращает position:fixed
+      у потомков в absolute — навигация и модальные листы уедут со скроллом.
+    */
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: var(--track-display);
+    color: var(--fg-primary);
+    margin: 0;
+  }
+
+  button {
+    font-family: inherit;
+    color: inherit;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  input,
+  textarea,
+  select {
+    font-family: var(--font-body);
+    /* 16px обязателен: меньше — и iOS Safari зумит страницу при фокусе. */
+    font-size: 16px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent-bright);
+    outline-offset: 2px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ТИПОГРАФИКА
+   ═══════════════════════════════════════════════════════════════════ */
+
+@layer components {
+  /*
+    Forum — одноначертательный шрифт (только 400). Вес здесь не задаётся
+    намеренно: `font-weight: 600` заставил бы браузер синтезировать жирный,
+    размазав лапидарный штрих. Иерархия строится размером и разрядкой,
+    как на настоящей резной надписи.
+  */
+
+  /* Число-герой: ровно одно на экран. */
+  .t-hero {
+    font-family: var(--font-display);
+    font-size: var(--text-hero);
+    line-height: var(--text-hero-lh);
+    letter-spacing: var(--track-tight);
+    font-variant-numeric: tabular-nums;
+    color: var(--fg-primary);
+  }
+
+  .t-display {
+    font-family: var(--font-display);
+    font-size: var(--text-display);
+    line-height: var(--text-display-lh);
+    letter-spacing: var(--track-display);
+    color: var(--fg-primary);
+  }
+
+  .t-h1 {
+    font-family: var(--font-display);
+    font-size: var(--text-h1);
+    line-height: var(--text-h1-lh);
+    letter-spacing: var(--track-display);
+    color: var(--fg-primary);
+  }
+
+  .t-h2 {
+    font-family: var(--font-display);
+    font-size: var(--text-h2);
+    line-height: var(--text-h2-lh);
+    letter-spacing: var(--track-display);
+    color: var(--fg-primary);
+  }
+
+  .t-title {
+    font-family: var(--font-body);
+    font-size: var(--text-title);
+    line-height: var(--text-title-lh);
+    font-weight: 600;
+    color: var(--fg-primary);
+  }
+
+  .t-body {
+    font-size: var(--text-body);
+    line-height: var(--text-body-lh);
+    color: var(--fg-secondary);
+  }
+
+  .t-sm {
+    font-size: var(--text-sm);
+    line-height: var(--text-sm-lh);
+    color: var(--fg-secondary);
+  }
+
+  .t-caption {
+    font-size: var(--text-caption);
+    line-height: var(--text-caption-lh);
+    color: var(--fg-muted);
+  }
+
+  /* Метка раздела. 11px допустимы только здесь: короткие заглавные с разрядкой. */
+  .t-label {
+    font-family: var(--font-num);
+    font-size: var(--text-label);
+    line-height: var(--text-label-lh);
+    font-weight: 500;
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+
+  .t-num {
+    font-family: var(--font-num);
+    font-size: var(--text-num);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--fg-primary);
+  }
+
+  /* ─────────────────────────────────────────────────────────────────
+     БУКВИЦА — подпись дизайна. Ровно один раз на экран.
+     ───────────────────────────────────────────────────────────────── */
+
+  /**
+   * Версал — укрупнённый золотой инициал внутри слова.
+   * Слово остаётся цельным: «Лавка», а не «Λ | авка».
+   */
+  .versal {
+    font-size: 1.32em;
+    line-height: 0;
+    color: var(--accent-bright);
+    /* Компенсация оптического разрыва после укрупнённой литеры. */
+    letter-spacing: -0.015em;
+    padding-right: 0.02em;
+  }
+
+  /* ═════════════════════════════════════════════════════════════════
+     ПОВЕРХНОСТИ
+     ═════════════════════════════════════════════════════════════════ */
+
+  .surface {
+    background:
+      linear-gradient(158deg, rgba(240, 234, 221, 0.04), transparent 60%),
+      var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-emboss);
+  }
+
+  .surface-raised {
+    background:
+      linear-gradient(158deg, rgba(240, 234, 221, 0.055), transparent 60%),
+      var(--bg-raised);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-emboss);
+  }
+
+  /* Единственная поверхность с золотой границей — то, что игрок должен заметить. */
+  .surface-accent {
+    background:
+      linear-gradient(158deg, rgba(201, 162, 39, 0.09), transparent 62%),
+      var(--bg-surface);
+    border: 1px solid var(--border-accent);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-emboss);
+  }
+
+  /* Волокно пергамента — только шапка и таб-бар, никогда под текстом. */
+  .grain {
+    background-image:
+      repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.13) 0 1px, transparent 1px 4px),
+      repeating-linear-gradient(0deg, rgba(240, 234, 221, 0.012) 0 1px, transparent 1px 4px);
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--border-subtle);
+    border: 0;
+  }
+
+  /* ═════════════════════════════════════════════════════════════════
+     ИНТЕРАКТИВНОСТЬ
+
+     Нажатие меняет прозрачность и границу, но НЕ геометрию:
+     transform/scale сдвигает соседей и читается как дрожание.
+     ═════════════════════════════════════════════════════════════════ */
+
+  .pressable {
+    transition: opacity var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out);
+  }
+  .pressable:active {
+    opacity: 0.62;
+  }
+  .pressable:disabled {
+    opacity: 0.38;
+    pointer-events: none;
+  }
+
+  /* Каждая тач-цель не меньше 44×44 — правило 2 CRITICAL из скилла. */
+  .tap {
+    min-width: var(--tap-min);
+    min-height: var(--tap-min);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    min-height: var(--tap-min);
+    padding: 0 var(--space-4);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    transition: opacity var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+  }
+  .btn:active {
+    opacity: 0.68;
+  }
+  .btn:disabled {
+    opacity: 0.38;
+    pointer-events: none;
+  }
+
+  /* Золотая заливка — только главное действие экрана. Не больше одной на вид. */
+  .btn-primary {
+    color: var(--ink-950);
+    background: var(--accent);
+    border: 1px solid var(--accent-deep);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  }
+
+  .btn-secondary {
+    color: var(--fg-primary);
+    background: var(--bg-raised);
+    border: 1px solid var(--border-strong);
+  }
+
+  .btn-ghost {
+    color: var(--fg-secondary);
+    background: transparent;
+    border: 1px solid var(--border-subtle);
+  }
+
+  .btn-danger {
+    color: var(--bone-100);
+    background: var(--danger-deep);
+    border: 1px solid rgba(0, 0, 0, 0.4);
+  }
+
+  /* ── Поля ввода ── */
+  .field {
+    width: 100%;
+    min-height: var(--tap-min);
+    padding: var(--space-3);
+    color: var(--fg-primary);
+    background: var(--bg-sunken);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    outline: none;
+    transition: border-color var(--dur-fast) var(--ease-out);
+  }
+  .field:focus {
+    border-color: var(--accent);
+  }
+  .field::placeholder {
+    /* fg-muted, а не fg-disabled: подсказка в поле — читаемый текст. */
+    color: var(--fg-muted);
+  }
+
+  /**
+   * Текстовая кнопка-ссылка. Выглядит как подпись, но тач-цель полноразмерная:
+   * визуальная высота задаётся текстом, кликабельная — псевдоэлементом.
+   */
+  .link-action {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  .link-action::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100%, var(--tap-min));
+    height: var(--tap-min);
+    transform: translate(-50%, -50%);
+  }
+
+  /* ── Чип-переключатель ── */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    /* 44px, а не 36: чипы — основной способ фильтрации, и они обязаны
+       соответствовать минимальной тач-цели (правило 2 CRITICAL). */
+    min-height: var(--tap-min);
+    padding: 0 var(--space-4);
+    border-radius: var(--radius-md);
+    font-size: var(--text-caption);
+    font-weight: 500;
+    color: var(--fg-secondary);
+    background: var(--bg-raised);
+    border: 1px solid var(--border-subtle);
+    transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  }
+  .chip[data-active='true'] {
+    color: var(--accent-bright);
+    border-color: var(--border-accent);
+    background: rgba(201, 162, 39, 0.1);
+  }
+
+  /* ═════════════════════════════════════════════════════════════════
+     ПОЛОСЫ ПРОГРЕССА
+     ═════════════════════════════════════════════════════════════════ */
+
+  .gauge {
+    position: relative;
+    height: 6px;
+    border-radius: var(--radius-full);
+    background: var(--bg-sunken);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.7);
+    overflow: hidden;
+  }
+  .gauge-fill {
+    height: 100%;
+    border-radius: var(--radius-full);
+    transition: width 600ms var(--ease-out);
+  }
+  .gauge-xp {
+    background: var(--accent);
+  }
+  /* Полное здоровье — не тревога. Красным полоса становится только при ранении. */
+  .gauge-health {
+    background: var(--success);
+  }
+  .gauge-danger {
+    background: var(--danger);
+  }
+  .gauge-season {
+    background: var(--success);
+  }
+
+  /* ═════════════════════════════════════════════════════════════════
+     ШАПКА И НАВИГАЦИЯ
+
+     Обе фиксированы. Работает только потому, что ни один предок
+     не имеет filter/transform — см. предупреждение у body.
+     ═════════════════════════════════════════════════════════════════ */
+
+  .app-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    padding-top: var(--safe-top);
+    background: var(--ink-950);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .app-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    display: flex;
+    padding-bottom: var(--safe-bottom);
+    background: var(--ink-950);
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-height: var(--nav-height);
+    /* 11px: короткая метка с разрядкой, не текст для чтения. */
+    font-family: var(--font-num);
+    font-size: var(--text-label);
+    line-height: var(--text-label-lh);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--fg-muted);
+    transition: color var(--dur-base) var(--ease-out);
+  }
+  .nav-item[data-active='true'] {
+    color: var(--accent-bright);
+  }
+  /* Активный пункт помечен и формой, а не только цветом — цвет не единственный индикатор. */
+  .nav-item[data-active='true']::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 22px;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 0 0 var(--radius-full) var(--radius-full);
+  }
+  .nav-item {
+    position: relative;
+  }
+
+  /* ═════════════════════════════════════════════════════════════════
+     МОДАЛЬНЫЕ ЛИСТЫ
+     ═════════════════════════════════════════════════════════════════ */
+
+  .sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    max-height: 88dvh;
+    margin: 0 auto;
+    max-width: var(--content-max);
+    padding-bottom: var(--safe-bottom);
+    background: var(--bg-raised);
+    border-top: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    box-shadow: var(--shadow-lift);
+    animation: sheetIn var(--dur-slow) var(--ease-out);
+  }
+
+  .scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    /* 62% — в диапазоне 40–60%+, изолирует фон. Блюр не используется: */
+    /* backdrop-filter создал бы containing block и сломал fixed у листа. */
+    background: rgba(5, 4, 3, 0.62);
+    animation: fadeIn var(--dur-base) ease;
+  }
+
+  /* ═════════════════════════════════════════════════════════════════
+     ИГРОВЫЕ ЭЛЕМЕНТЫ
+     ═════════════════════════════════════════════════════════════════ */
+
+  /* Всплывающая награда. fixed работает — предки чисты от filter. */
+  .float-num {
+    position: fixed;
+    left: 50%;
+    z-index: 60;
+    pointer-events: none;
+    font-family: var(--font-num);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+    white-space: nowrap;
+  }
+
+  /* Восковая печать — ровно одно место в приложении: повышение уровня. */
+  .wax-seal {
+    display: grid;
+    place-items: center;
+    width: 128px;
+    height: 128px;
+    border-radius: var(--radius-full);
+    background: radial-gradient(circle at 35% 30%, #cc5f47, var(--blood-600) 48%, #4d1811);
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.7), inset 0 3px 10px rgba(255, 255, 255, 0.2),
+      inset 0 -8px 16px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Календарная точка выполнения. */
+  .day-dot {
+    aspect-ratio: 1;
+    border-radius: var(--radius-sm);
+    background: rgba(240, 234, 221, 0.05);
+  }
+  .day-dot[data-state='done'] {
+    background: var(--accent);
+  }
+  .day-dot[data-state='missed'] {
+    background: rgba(192, 83, 64, 0.35);
+  }
+  .day-dot[data-state='off'] {
+    background: rgba(240, 234, 221, 0.02);
+  }
+
+  /* Пользовательский глиф — эмодзи игрока. Никогда не смешивается с иконками системы. */
+  .user-glyph {
+    display: inline-grid;
+    place-items: center;
+    font-size: 18px;
+    line-height: 1;
+    font-family:
+      'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   АНИМАЦИИ
+   ═══════════════════════════════════════════════════════════════════ */
+
+@keyframes sheetIn {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translate(-50%, 0) scale(0.85);
+    opacity: 0;
+  }
+  18% {
+    transform: translate(-50%, -10px) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -68px) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes sealIn {
+  0% {
+    transform: scale(2.2) rotate(-10deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(0.95) rotate(2deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.anim-float {
+  animation: floatUp 1100ms var(--ease-out) forwards;
+}
+.anim-seal {
+  animation: sealIn 550ms var(--ease-spring) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

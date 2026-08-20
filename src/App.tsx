@@ -1,91 +1,124 @@
-import { useState, useEffect } from 'react'
-import { getCharacter, getQuests } from './lib/storage'
-import { checkAndResetDailyQuests } from './lib/gameLogic'
-import { scheduleQuestNotifications } from './lib/notifications'
-import CharacterScreen from './screens/CharacterScreen'
-import QuestsScreen from './screens/QuestsScreen'
-import LogScreen from './screens/LogScreen'
-import LevelUpScreen from './screens/LevelUpScreen'
-import OnboardingScreen from './screens/OnboardingScreen'
+import { useEffect, useRef, useState } from 'react';
+import { GameProvider, useGame } from '@/state/useGame';
+import { TopBar } from '@/ui/TopBar';
+import { Overlays } from '@/ui/Overlays';
+import { CharacterScreen } from '@/ui/screens/CharacterScreen';
+import { HabitsScreen } from '@/ui/screens/HabitsScreen';
+import { QuestsScreen } from '@/ui/screens/QuestsScreen';
+import { SettingsScreen } from '@/ui/screens/SettingsScreen';
+import { ShopScreen } from '@/ui/screens/ShopScreen';
+import { TodayScreen } from '@/ui/screens/TodayScreen';
+import { unlockAudio } from '@/ui/feedback';
+import { Onboarding } from '@/ui/Onboarding';
+import { Icon } from '@/ui/icons';
+import type { IconName } from '@/ui/icons';
 
-type Screen = 'character' | 'quests' | 'log'
+type Tab = 'today' | 'habits' | 'quests' | 'shop' | 'character' | 'settings';
 
-const NAV_ITEMS: { id: Screen; label: string; icon: string }[] = [
-  { id: 'character', label: 'Герой', icon: '⚔️' },
-  { id: 'quests',    label: 'Квесты', icon: '📜' },
-  { id: 'log',       label: 'История', icon: '📖' },
-]
+/** Навигация — ровно 5 пунктов (правило bottom-nav-limit). Настройки живут в шапке. */
+const TABS: { id: Tab; icon: IconName; label: string }[] = [
+  { id: 'today', icon: 'navToday', label: 'Сегодня' },
+  { id: 'habits', icon: 'navHabits', label: 'Фолиант' },
+  { id: 'quests', icon: 'navQuests', label: 'Квесты' },
+  { id: 'shop', icon: 'navShop', label: 'Лавка' },
+  { id: 'character', icon: 'navHero', label: 'Герой' },
+];
 
-export default function App() {
-  const [screen, setScreen] = useState<Screen>('character')
-  const [levelUp, setLevelUp] = useState<number | null>(null)
-  const [isFirstLaunch, setIsFirstLaunch] = useState(() => {
-    const char = getCharacter()
-    return char.name === 'Герой'
-  })
+export default function App(): JSX.Element {
+  return (
+    <GameProvider>
+      <Shell />
+    </GameProvider>
+  );
+}
+
+function Shell(): JSX.Element {
+  const { settings, track } = useGame();
+  const [tab, setTab] = useState<Tab>('today');
+
+  /*
+    Длительность просмотра экрана пишется на ВЫХОДЕ с него, а не на входе:
+    на входе она ещё неизвестна. Последний экран сессии фиксируется по
+    `pagehide` — на iOS это единственное надёжное событие ухода: `unload`
+    там не срабатывает при сворачивании в фон.
+  */
+  const enteredAt = useRef(Date.now());
+  const currentTab = useRef<Tab>(tab);
 
   useEffect(() => {
-    checkAndResetDailyQuests()
-    scheduleQuestNotifications(getQuests())
-  }, [])
+    const previous = currentTab.current;
+    if (previous !== tab) {
+      track('screenView', previous, Date.now() - enteredAt.current);
+      enteredAt.current = Date.now();
+      currentTab.current = tab;
+    }
+  }, [tab, track]);
 
-  if (isFirstLaunch) {
-    return <OnboardingScreen onComplete={() => setIsFirstLaunch(false)} />
-  }
+  useEffect(() => {
+    const flush = (): void => {
+      track('screenView', currentTab.current, Date.now() - enteredAt.current);
+      enteredAt.current = Date.now();
+    };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') flush();
+    });
+    return () => window.removeEventListener('pagehide', flush);
+  }, [track]);
+
+  // Аудио на iOS разблокируется только внутри пользовательского жеста.
+  useEffect(() => {
+    const unlock = (): void => unlockAudio();
+    document.addEventListener('pointerdown', unlock, { once: true });
+    return () => document.removeEventListener('pointerdown', unlock);
+  }, []);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [tab]);
+
+  if (!settings.onboarded) return <Onboarding />;
 
   return (
-    <div
-      className="h-full text-gray-100 flex flex-col max-w-md mx-auto"
-      style={{ backgroundColor: '#0a0a0f' }}
-    >
-      <div
-        className="flex-1 overflow-y-auto"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
-      >
-        {screen === 'character' && <CharacterScreen />}
-        {screen === 'quests' && <QuestsScreen onLevelUp={setLevelUp} />}
-        {screen === 'log' && <LogScreen />}
-      </div>
+    <>
+      <TopBar onOpenSettings={() => setTab('settings')} />
 
-      {/* Навигация */}
-      <nav
-        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md flex border-t"
+      <main
+        className="mx-auto"
         style={{
-          backgroundColor: '#0d0d14',
-          borderColor: 'rgba(255,255,255,0.05)',
-          paddingBottom: 'env(safe-area-inset-bottom)',
+          maxWidth: 'var(--content-max)',
+          // Контент не прячется под фиксированными панелями.
+          paddingTop: 'calc(var(--header-height) + var(--safe-top))',
+          paddingBottom: 'calc(var(--nav-height) + var(--safe-bottom) + var(--space-6))',
         }}
       >
-        {NAV_ITEMS.map(item => {
-          const isActive = screen === item.id
-          return (
+        {tab === 'today' ? <TodayScreen onOpenHabits={() => setTab('habits')} /> : null}
+        {tab === 'habits' ? <HabitsScreen /> : null}
+        {tab === 'quests' ? <QuestsScreen /> : null}
+        {tab === 'shop' ? <ShopScreen /> : null}
+        {tab === 'character' ? <CharacterScreen /> : null}
+        {tab === 'settings' ? <SettingsScreen /> : null}
+      </main>
+
+      <nav className="app-nav grain" aria-label="Основная навигация">
+        <div className="mx-auto flex w-full" style={{ maxWidth: 'var(--content-max)' }}>
+          {TABS.map((t) => (
             <button
-              key={item.id}
-              onClick={() => setScreen(item.id)}
-              className="relative flex-1 flex flex-col items-center pt-3 pb-4 transition-colors"
+              key={t.id}
+              type="button"
+              className="nav-item"
+              data-active={tab === t.id}
+              onClick={() => setTab(t.id)}
+              aria-current={tab === t.id ? 'page' : undefined}
             >
-              {/* Индикатор активной вкладки */}
-              {isActive && (
-                <span
-                  className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-blue-500"
-                />
-              )}
-              <span className="text-lg mb-0.5">{item.icon}</span>
-              <span
-                className={`text-xs font-bold tracking-wider transition-colors ${
-                  isActive ? 'text-blue-400' : 'text-gray-600'
-                }`}
-              >
-                {item.label.toUpperCase()}
-              </span>
+              <Icon name={t.icon} size="md" />
+              {t.label}
             </button>
-          )
-        })}
+          ))}
+        </div>
       </nav>
 
-      {levelUp !== null && (
-        <LevelUpScreen level={levelUp} onClose={() => setLevelUp(null)} />
-      )}
-    </div>
-  )
+      <Overlays />
+    </>
+  );
 }

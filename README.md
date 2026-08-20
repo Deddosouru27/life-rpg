@@ -1,73 +1,147 @@
-# React + TypeScript + Vite
+# Life RPG — Хроника Странника
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Мобильная PWA-игра, где реальная жизнь является игровым процессом. Не трекер привычек
+с игровым скином: механика прогрессии питается настоящими действиями.
 
-Currently, two official plugins are available:
+- [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) — механики, формулы, экономика, обоснования
+- [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) — палитра, типографика, спейсинг, правила
+- [docs/DESIGN_QA.md](docs/DESIGN_QA.md) — результаты чеклиста по каждому экрану
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## Запуск
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev        # разработка, http://localhost:5173
+npm run build      # tsc --noEmit + production-сборка в dist/
+npm run preview    # проверить собранную PWA локально
+npm test           # тесты движка
+npm run typecheck  # только проверка типов
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Иконки PWA генерируются скриптом без внешних зависимостей:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+node scripts/generateIcons.mjs
 ```
+
+---
+
+## Дизайн
+
+Полные правила — в [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md). Кратко:
+
+- **Токены** — [`src/styles/tokens.css`](src/styles/tokens.css). Единственный источник
+  цвета, типографики, отступов и движения. Компоненты обращаются только к семантическим
+  токенам (`--fg-primary`, `--accent`), никогда к сырой палитре.
+- **Палитра — 5 тонов**: `ink` (тёплая тьма), `bone` (текст), `gilt` (акцент, ≤10%
+  площади), `blood` (опасность), `moss` (успех). Атрибуты различаются иконкой и
+  подписью, а не цветом.
+- **Шрифты** — Cormorant Garamond (заголовки), Spectral (текст), IBM Plex Mono (числа).
+  Все три с кириллицей, подключены через `@fontsource` локальными файлами: ни одного
+  запроса к CDN, поэтому офлайн работает и типографика.
+- **Иконки** — `lucide-react`, outline, обводка 1.5, размеры 16/20/24. Эмодзи в
+  системном интерфейсе запрещены; они допустимы только как метка, которую игрок сам
+  выбрал для своей награды, и рендерятся в отдельном контейнере `.user-glyph`.
+- **Tailwind** отвечает только за раскладку. Палитра в нём намеренно не продублирована.
+
+### Два правила, нарушение которых ломает вёрстку молча
+
+1. **Никаких `filter` / `transform` / `backdrop-filter` на предках фиксированных
+   элементов.** Любое из них создаёт containing block, и `position: fixed` начинает
+   вести себя как `absolute` — нижняя навигация и модальные листы уезжают со скроллом.
+   Именно так был сломан первый вариант.
+2. **Шрифт без кириллицы не рассматривается.** Он не выдаст ошибку — браузер молча
+   подставит системный fallback, и заголовки поедут в Georgia.
+
+Классы, которые собираются в рантайме (`gauge-*`, `btn-*`, `surface*`), перечислены в
+`safelist` в [tailwind.config.js](tailwind.config.js): без этого они вычищаются из
+production-сборки, и вёрстка ломается только в собранной версии.
+
+### Установка на iPhone
+
+1. `npm run build && npm run preview` (или разверни `dist/` на любом https-хостинге).
+2. Открой адрес в Safari.
+3. Поделиться → «На экран Домой».
+
+Service worker кладёт всё в precache, поэтому после первого открытия игра работает
+полностью офлайн, включая отметки, награды, магазин и экспорт сейва.
+
+---
+
+## Где крутить баланс
+
+**Один файл: [`src/game/balance.ts`](src/game/balance.ts).** Все числа игры живут там и
+больше нигде. Код их не дублирует.
+
+| Хочу изменить | Константы |
+|---|---|
+| Скорость роста уровня | `XP_BASE`, `XP_EXPONENT` |
+| Скорость роста атрибутов | `ATTR_XP_BASE`, `ATTR_XP_EXPONENT` |
+| Границы рангов E→SS | `RANK_THRESHOLDS` |
+| Награды за привычки и квесты | `XP_BY_DIFFICULTY`, `XP_BY_QUEST_DIFFICULTY`, `GOLD_RATIO` |
+| Частоту и силу критов | `CRIT_CHANCE`, `CRIT_MULTIPLIER`, `CRIT_PITY_THRESHOLD` |
+| Жёсткость штрафов | `HP_LOSS_PER_MISS`, `HP_LOSS_DAILY_CAP`, `HP_REGEN_*` |
+| Мягкость возвращения после перерыва | `COMEBACK_*` |
+| Порог зачёта дня в стрик | `GLOBAL_STREAK_THRESHOLD` |
+| Экономику расходников | `CONSUMABLES` (цена, лимит в сумке, лимит за месяц, рост цены) |
+| Курс реальных наград | `REAL_REWARD_TENGE_RATE`, `REAL_REWARD_TIERS` |
+| Длину и шкалу сезона | `SEASON_*` |
+
+Тесты движка проверяют кривые на конкретных числах из документа — если поменяешь
+константы, `npm test` покажет, какие обещания дизайна поехали.
+
+Каталоги контента — тоже данные, не код:
+
+- [`src/data/habitPresets.ts`](src/data/habitPresets.ts) — 72 готовые привычки
+- [`src/data/catalog.ts`](src/data/catalog.ts) — косметика и расходники
+- [`src/data/merchants.ts`](src/data/merchants.ts) — торговцы и их реплики
+- [`src/data/locations.ts`](src/data/locations.ts) — локации
+- [`src/game/achievements.ts`](src/game/achievements.ts) — 24 достижения
+
+---
+
+## Устройство
+
+```
+src/
+  game/        Движок. Чистые функции, ноль зависимостей от React и браузера.
+    balance.ts     ← все числа игры
+    types.ts       ← все типы
+    progression.ts кривые опыта, ранги, ступени HP
+    scheduling.ts  что назначено на день и что обязательно
+    rewards.ts     расчёт награды, криты, редкие находки
+    character.ts   операции над персонажем
+    actions.ts     отметить привычку, закрыть квест
+    dayEngine.ts   вечерний cron: стрики, штрафы, возвращение, сезоны
+    economy.ts     магазин, лимиты, «желанная покупка»
+    achievements.ts
+  data/        Контент как данные
+  db/          Dexie — единственный источник правды
+    database.ts, repository.ts, saveFile.ts
+    syncEngine.ts  ← изолированный Supabase, выключен по умолчанию
+  state/       useGame — мост между движком и UI
+  ui/          Компоненты. Вычислений не содержат.
+```
+
+Правило, которое держит всё: **UI не считает.** Любое число, которое видит игрок,
+посчитано чистой функцией в `src/game/` и покрыто тестом.
+
+---
+
+## Синхронизация (необязательно)
+
+Игра целиком работает без сети и без аккаунта. Supabase — надстройка, которая
+включается флагом в настройках и грузится динамически: пока она выключена, её код
+вообще не попадает в загруженный бандл.
+
+Разрешение конфликтов — last-write-wins по `updated_at`. SQL для таблицы показывается
+прямо в настройках приложения.
+
+---
+
+## Сейв
+
+Экспорт и импорт JSON — в настройках («Свиток»). Импорт валидирует файл перед записью:
+битый или чужой сейв не затрёт текущий.
