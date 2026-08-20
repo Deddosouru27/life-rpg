@@ -179,41 +179,112 @@ export function Gauge({
  */
 export function ProgressRing({
   value,
-  size = 168,
+  size = 176,
+  ticks = 0,
   children,
 }: {
   value: number;
   size?: number;
+  /** Число делений по окружности — по одному на назначенное дело. */
+  ticks?: number;
   children: ReactNode;
 }): JSX.Element {
-  const stroke = 6;
-  const r = (size - stroke) / 2;
+  const stroke = 9;
+  const r = (size - stroke) / 2 - 10;
   const circumference = 2 * Math.PI * r;
   const clamped = Math.max(0, Math.min(1, value));
+  const gradientId = useId();
+
+  /*
+    Кольцо дня — единственный герой экрана, и оно было тонкой золотой дугой
+    на пустоте: элемент из любого дашборда. Четыре слоя, которые превращают
+    его в циферблат:
+
+      1. внешнее тонкое кольцо-обод — рамка прибора, а не просто край;
+      2. вдавленный жёлоб под дугу (тёмный, с внутренней тенью);
+      3. деления по числу дел дня — прогресс становится СЧИТАЕМЫМ:
+         видно «четыре из шести», не читая подпись;
+      4. сама дуга с градиентом и свечением.
+
+    Деления рисуются только когда дел немного: при двадцати они сливаются
+    в сплошную линию и превращаются в шум.
+  */
+  const showTicks = ticks > 0 && ticks <= 12;
+  const tickMarks = showTicks
+    ? Array.from({ length: ticks }, (_, i) => (i / ticks) * 360)
+    : [];
 
   return (
     <div className="relative grid place-items-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="absolute inset-0 -rotate-90" aria-hidden>
+      <svg width={size} height={size} className="absolute inset-0" aria-hidden>
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0.6" y2="1">
+            <stop offset="0%" stopColor="var(--accent-bright)" />
+            <stop offset="55%" stopColor="var(--accent)" />
+            <stop offset="100%" stopColor="var(--accent-deep)" />
+          </linearGradient>
+        </defs>
+
+        {/* Обод прибора. */}
         <circle
           cx={size / 2}
           cy={size / 2}
-          r={r}
+          r={r + stroke / 2 + 5}
           fill="none"
-          stroke="var(--bg-sunken)"
-          strokeWidth={stroke}
+          stroke="var(--border-subtle)"
+          strokeWidth="1"
         />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke="var(--accent)"
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={circumference * (1 - clamped)}
-          style={{ transition: 'stroke-dashoffset 700ms var(--ease-out)' }}
-        />
+
+        <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
+          {/* Жёлоб. */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            stroke="var(--bg-sunken)"
+            strokeWidth={stroke}
+          />
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            stroke="rgba(0,0,0,.55)"
+            strokeWidth={stroke - 4}
+          />
+
+          {/* Заполненная дуга. */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            stroke={`url(#${gradientId})`}
+            strokeWidth={stroke}
+            strokeLinecap="butt"
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference * (1 - clamped)}
+            style={{
+              transition: 'stroke-dashoffset 700ms var(--ease-out)',
+              filter: clamped > 0 ? 'drop-shadow(0 0 6px rgba(201,162,39,.5))' : 'none',
+            }}
+          />
+        </g>
+
+        {/* Деления — по одному на дело дня. */}
+        {tickMarks.map((deg) => (
+          <line
+            key={deg}
+            x1={size / 2}
+            y1={size / 2 - r - stroke / 2 - 1}
+            x2={size / 2}
+            y2={size / 2 - r - stroke / 2 - 4}
+            stroke="var(--border-strong)"
+            strokeWidth="1"
+            transform={`rotate(${deg} ${size / 2} ${size / 2})`}
+          />
+        ))}
       </svg>
       <div className="relative text-center">{children}</div>
     </div>
@@ -231,25 +302,57 @@ export function RankSigil({ rank, size = 'md' }: { rank: Rank; size?: 'sm' | 'md
     lg: { box: 'var(--sigil-lg)', text: 'var(--text-h1)' },
   }[size];
 
+  /*
+    ПЕЧАТЬ РАНГА — гербовый щит, а не квадрат с буквой.
+
+    Ранг — единственное качественное изменение статуса в игре (E → SS),
+    и он был обозначен прямоугольником со скруглением 2px: слабее, чем
+    иконка привычки рядом. Теперь это восьмиугольный картуш со срезанными
+    углами, двойной обводкой и свечением — форма, которой на экране больше
+    нет ни у чего, поэтому знак опознаётся мгновенно.
+
+    Срез углов — через clip-path, а не картинкой: масштабируется, красится
+    токенами и ничего не весит.
+  */
+  const octagon =
+    'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)';
+
   return (
     <span
-      className="grid shrink-0 place-items-center rounded-sm border"
-      style={{
-        width: dims.box,
-        height: dims.box,
-        borderColor: 'var(--border-accent)',
-        background: 'linear-gradient(160deg, rgba(201,162,39,.14), transparent 70%)',
-      }}
+      className="relative grid shrink-0 place-items-center"
+      style={{ width: dims.box, height: dims.box }}
       aria-label={`Ранг ${rank}`}
     >
+      {/* Внешняя грань — золотой контур картуша. */}
+      <span
+        aria-hidden
+        className="absolute inset-0"
+        style={{
+          clipPath: octagon,
+          background: 'linear-gradient(160deg, var(--accent) 0%, var(--accent-deep) 55%, #3a2e0d 100%)',
+          boxShadow: 'var(--glow-accent)',
+        }}
+      />
+      {/* Внутреннее поле — тёмная эмаль под литерой. */}
+      <span
+        aria-hidden
+        className="absolute"
+        style={{
+          inset: '2px',
+          clipPath: octagon,
+          background:
+            'radial-gradient(120% 100% at 50% 0%, rgba(240,234,221,.09), transparent 60%), var(--ink-900)',
+        }}
+      />
       {/* Вес не задаём: Forum одноначертательный, синтетический жир его портит. */}
       <span
-        className="leading-none"
+        className="relative leading-none"
         style={{
           fontFamily: 'var(--font-display)',
           fontSize: dims.text,
           letterSpacing: 'var(--track-display)',
           color: 'var(--accent-bright)',
+          textShadow: '0 1px 0 rgba(0,0,0,.8)',
         }}
       >
         {rank}
@@ -476,6 +579,20 @@ export function Field({
  * disclosure тянет собственный маркер и собственную типографику, которые
  * пришлось бы гасить, и по-разному ведёт себя при поиске по странице.
  */
+/**
+ * Разделитель с виньеткой. Ставится там, где меняется смысл раздела.
+ *
+ * Прямая линия во всю ширину — типографика таблицы. Гаснущая к краям линия
+ * с ромбом по центру — типографика книги; приложение называется «Хроника».
+ */
+export function OrnateRule(): JSX.Element {
+  return (
+    <div className="rule-ornate" aria-hidden style={{ marginBlock: 'var(--space-8)' }}>
+      <span />
+    </div>
+  );
+}
+
 export function Disclosure({
   title,
   summary,

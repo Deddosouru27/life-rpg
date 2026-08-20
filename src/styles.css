@@ -231,22 +231,127 @@
      ПОВЕРХНОСТИ
      ═════════════════════════════════════════════════════════════════ */
 
-  .surface {
-    background:
-      linear-gradient(158deg, rgba(240, 234, 221, 0.04), transparent 60%),
-      var(--bg-surface);
+  /*
+    ПОВЕРХНОСТЬ КАК МАТЕРИАЛ, А НЕ КАК ПРЯМОУГОЛЬНИК.
+
+    Раньше здесь был двухстоповый градиент и рамка в 1px. Этого хватает,
+    чтобы отделить блок от фона, и не хватает, чтобы он выглядел предметом:
+    в интерфейсах Diablo IV и BG3 панель читается как выделанная кожа или
+    камень, потому что у неё есть направление света, толщина и зерно.
+
+    Четыре слоя снизу вверх:
+      1. базовый тон;
+      2. диагональный свет — источник сверху слева, как на всех панелях;
+      3. виньетка по углам — край темнее центра, из-за этого поверхность
+         перестаёт быть плоской заливкой;
+      4. зерно (см. `.grain-layer`) поверх, ниже порога различимости узора.
+  */
+  .surface,
+  .surface-raised {
+    position: relative;
+    isolation: isolate;
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-sm);
     box-shadow: var(--shadow-emboss);
   }
 
+  .surface {
+    background:
+      radial-gradient(120% 90% at 50% 0%, rgba(240, 234, 221, 0.05), transparent 55%),
+      radial-gradient(140% 120% at 50% 120%, rgba(0, 0, 0, 0.5), transparent 60%),
+      linear-gradient(158deg, rgba(240, 234, 221, 0.045) 0%, rgba(240, 234, 221, 0.012) 38%, transparent 62%),
+      var(--bg-surface);
+  }
+
   .surface-raised {
     background:
-      linear-gradient(158deg, rgba(240, 234, 221, 0.055), transparent 60%),
+      radial-gradient(120% 90% at 50% 0%, rgba(240, 234, 221, 0.07), transparent 55%),
+      radial-gradient(140% 120% at 50% 120%, rgba(0, 0, 0, 0.45), transparent 60%),
+      linear-gradient(158deg, rgba(240, 234, 221, 0.06) 0%, rgba(240, 234, 221, 0.018) 38%, transparent 62%),
       var(--bg-raised);
-    border: 1px solid var(--border-subtle);
+  }
+
+  /*
+    Зерно поверх поверхности. Псевдоэлемент, а не background-image самой
+    панели: иначе зерно масштабировалось бы вместе с градиентами и на
+    высоких карточках растягивалось в полосы.
+
+    Плотность 5.5% — предел, за которым проступает узор. Текстура работает,
+    пока её не видно как текстуру.
+  */
+  .surface::after,
+  .surface-raised::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: var(--grain-opacity);
+    /*
+      ФРАКТАЛЬНЫЙ ШУМ, а не повторяющийся градиент.
+
+      Первая версия собирала зерно из двух `repeating-conic-gradient`.
+      Любой repeating-градиент периодичен, и на плоской панели периодичность
+      складывается в муар: вместо зерна проступало диагональное плетение,
+      панель начинала выглядеть тканью. Это ровно то, от чего предостерегает
+      собственное правило системы — «текстура работает, пока её не видно
+      как текстуру».
+
+      feTurbulence даёт апериодический шум. baseFrequency 0.9 — мелкое
+      зерно бумаги; выше — цифровой сор, ниже — заметные пятна.
+    */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+    background-size: 140px 140px;
+    mix-blend-mode: overlay;
+  }
+
+  /*
+    ВДАВЛЕННАЯ поверхность — для выполненного.
+
+    Разница «сделано / не сделано» держится не только зачёркиванием и цветом
+    галочки, но и материалом: закрытое дело физически утоплено в лист.
+    Это читается периферийным зрением, до чтения текста.
+  */
+  .surface-done {
+    background:
+      radial-gradient(130% 100% at 50% 0%, rgba(0, 0, 0, 0.35), transparent 60%),
+      var(--bg-sunken);
+    border: 1px solid rgba(0, 0, 0, 0.5);
     border-radius: var(--radius-sm);
-    box-shadow: var(--shadow-emboss);
+    box-shadow: var(--shadow-inset);
+  }
+
+  /*
+    ФИЛИГРАНЬ — золото как ЛИНИЯ.
+
+    В доке про Diablo IV написано «золото живёт в филиграни рамок», а в коде
+    золото было только цветом текста и галочки. Четыре угловые засечки —
+    самый дешёвый способ сказать «эта панель важная», не потратив ни одного
+    процента площади на заливку.
+  */
+  .filigree {
+    position: relative;
+  }
+  .filigree::before,
+  .filigree::after {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    pointer-events: none;
+    border-color: var(--border-accent);
+    border-style: solid;
+  }
+  .filigree::before {
+    top: -1px;
+    left: -1px;
+    border-width: 1px 0 0 1px;
+  }
+  .filigree::after {
+    bottom: -1px;
+    right: -1px;
+    border-width: 0 1px 1px 0;
   }
 
   /* Единственная поверхность с золотой границей — то, что игрок должен заметить. */
@@ -260,16 +365,57 @@
   }
 
   /* Волокно пергамента — только шапка и таб-бар, никогда под текстом. */
+  /* Шапка и навигация — тот же шум, вдвое слабее: это не поверхность-предмет. */
   .grain {
-    background-image:
-      repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.13) 0 1px, transparent 1px 4px),
-      repeating-linear-gradient(0deg, rgba(240, 234, 221, 0.012) 0 1px, transparent 1px 4px);
+    position: relative;
+  }
+  .grain::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: calc(var(--grain-opacity) * 0.6);
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+    background-size: 140px 140px;
   }
 
   .divider {
     height: 1px;
     background: var(--border-subtle);
     border: 0;
+  }
+
+  /*
+    Разделитель с виньеткой: линия, гаснущая к краям, и ромб по центру.
+    Прямая линия во всю ширину — типографика таблицы. Гаснущая линия с
+    засечкой — типографика книги, а приложение называется «Хроника».
+  */
+  .rule-ornate {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--accent-deep);
+  }
+  .rule-ornate::before,
+  .rule-ornate::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+  }
+  .rule-ornate::before {
+    background: linear-gradient(90deg, transparent, var(--border-subtle) 65%, var(--border-accent));
+  }
+  .rule-ornate::after {
+    background: linear-gradient(270deg, transparent, var(--border-subtle) 65%, var(--border-accent));
+  }
+  .rule-ornate > span {
+    width: 5px;
+    height: 5px;
+    flex: none;
+    transform: rotate(45deg);
+    background: var(--accent);
+    opacity: 0.75;
   }
 
   /* ═════════════════════════════════════════════════════════════════

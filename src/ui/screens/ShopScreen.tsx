@@ -167,7 +167,7 @@ export function ShopScreen(): JSX.Element {
 
       {/* ── Герой экрана: торговец ── */}
       {merchant ? (
-        <Card tone="raised" className="mt-6 p-5">
+        <Card tone="raised" className="filigree mt-6 p-5">
           <div className="flex items-center gap-3">
             <span
               className="grid shrink-0 place-items-center rounded-full"

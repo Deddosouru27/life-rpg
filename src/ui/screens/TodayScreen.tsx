@@ -25,6 +25,7 @@ import {
   Card,
   cx,
   EmptyState,
+  OrnateRule,
   ProgressRing,
   SectionLabel,
 } from '../primitives';
@@ -62,7 +63,7 @@ export function TodayScreen({ onOpenHabits }: { onOpenHabits: () => void }): JSX
           у единственного главного элемента — кольца дня.
         */}
         <div className="mt-2">
-          <ProgressRing value={schedule.completionRate}>
+          <ProgressRing value={schedule.completionRate} ticks={schedule.dueCount}>
             <p
               className="t-num leading-none"
               style={{
@@ -156,8 +157,10 @@ export function TodayScreen({ onOpenHabits }: { onOpenHabits: () => void }): JSX
         )}
       </section>
 
+      <OrnateRule />
+
       {/* ── Третий уровень ── */}
-      <section style={{ marginTop: 'var(--gap-section)' }}>
+      <section>
         <SectionLabel
           action={
             <button
@@ -238,9 +241,23 @@ function HabitRow({
   const mult = streakMultiplier(habit.currentStreak);
   const baseXp = XP_BY_DIFFICULTY[habit.difficulty];
 
+  /*
+    Состояние читается МАТЕРИАЛОМ, а не только цветом.
+    Невыполненное — приподнятая панель с фаской; выполненное — вдавленная
+    в лист, с золотой засечкой слева. Шесть одинаковых прямоугольников
+    различались раньше только зачёркиванием, и список читался как таблица.
+  */
   return (
     <li
-      className={cx('surface flex items-stretch overflow-hidden', done && !isNegative && 'opacity-70')}
+      className={cx(
+        'flex items-stretch overflow-hidden',
+        done && !isNegative ? 'surface-done' : 'surface',
+      )}
+      style={
+        done && !isNegative
+          ? { boxShadow: 'var(--shadow-inset), inset 3px 0 0 var(--accent-deep)' }
+          : undefined
+      }
     >
       <button
         type="button"

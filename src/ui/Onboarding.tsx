@@ -494,7 +494,11 @@ function StepSystem({
     <div className="flex flex-1 flex-col justify-center">
       <p className="t-label">Шаг 3 из 3</p>
 
-      <Card tone="raised" style={{ padding: 'var(--space-6)', marginTop: 'var(--space-5)' }}>
+      <Card
+        tone="raised"
+        className="filigree"
+        style={{ padding: 'var(--space-6)', marginTop: 'var(--space-5)' }}
+      >
         <p className="t-label" style={{ color: 'var(--accent-bright)' }}>
           Уведомление Системы
         </p>
